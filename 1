@@ -1,0 +1,2017 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIGNAL — Digital Signage & Presencia de Marca</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Familjen+Grotesk:ital,wght@0,400;0,500;0,700;1,400&family=DM+Mono:wght@400;500&display=swap');
+
+:root {
+  --ink: #08080C;
+  --paper: #F0EDE6;
+  --signal: #FF2D00;
+  --warm: #FFB800;
+  --cool: #00C2FF;
+  --dim: rgba(240,237,230,0.45);
+  --card-bg: #0F0F16;
+  --line: rgba(240,237,230,0.1);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--ink);
+  color:var(--paper);
+  font-family:'Familjen Grotesk',sans-serif;
+  overflow-x:hidden;
+}
+
+/* ── CURSOR ── */
+#cur{width:10px;height:10px;background:var(--signal);border-radius:50%;position:fixed;pointer-events:none;z-index:9999;transition:transform .12s;mix-blend-mode:difference;transition:opacity .3s}
+#cur2{width:32px;height:32px;border:1px solid var(--signal);border-radius:50%;position:fixed;pointer-events:none;z-index:9998;transition:all .2s ease;opacity:.6}
+body *{cursor:none}
+/* On touch devices: cursor visible only on finger contact */
+@media (hover:none){
+  #cur{opacity:0}
+  #cur2{opacity:0}
+  body *{cursor:auto}
+}
+
+/* ── SCANLINE overlay ── */
+body::after{
+  content:'';position:fixed;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.04) 3px,rgba(0,0,0,.04) 4px);
+  pointer-events:none;z-index:9990;
+}
+
+/* ══════════════════════════════
+   HERO
+══════════════════════════════ */
+.hero{
+  min-height:100vh;
+  display:grid;
+  grid-template-rows:auto 1fr auto;
+  position:relative;
+  overflow:hidden;
+}
+
+/* Animated scoreboard BG */
+.hero-bg{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 40%, rgba(255,45,0,.12) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 30% at 80% 80%, rgba(255,184,0,.07) 0%, transparent 50%),
+    var(--ink);
+}
+.ticker-bg{
+  position:absolute;bottom:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,transparent,var(--signal),transparent);
+  animation:tickerGlow 3s ease-in-out infinite;
+}
+@keyframes tickerGlow{0%,100%{opacity:.4;transform:scaleX(.6)}50%{opacity:1;transform:scaleX(1)}}
+
+/* Big screen glow effect */
+.screen-glow{
+  position:absolute;
+  width:70vw;max-width:900px;height:50vh;
+  top:50%;left:50%;transform:translate(-50%,-52%);
+  border:1px solid rgba(255,45,0,.15);
+  box-shadow:
+    0 0 80px rgba(255,45,0,.08),
+    0 0 200px rgba(255,45,0,.04),
+    inset 0 0 60px rgba(255,45,0,.03);
+  animation:screenPulse 4s ease-in-out infinite;
+}
+@keyframes screenPulse{0%,100%{opacity:.5}50%{opacity:1}}
+
+/* ── NAV ── */
+nav{
+  position:relative;z-index:10;
+  display:flex;justify-content:space-between;align-items:center;
+  padding:28px 60px;
+  border-bottom:1px solid var(--line);
+}
+.nav-logo{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:28px;letter-spacing:.12em;
+}
+.nav-logo span{color:var(--signal)}
+.nav-badge{
+  font-family:'DM Mono',monospace;
+  font-size:10px;letter-spacing:.25em;
+  color:var(--signal);
+  border:1px solid rgba(255,45,0,.4);
+  padding:5px 12px;
+}
+.nav-links{
+  display:flex;gap:32px;
+  font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.15em;color:var(--dim);
+}
+.nav-links span{transition:color .2s}
+.nav-links span:hover{color:var(--paper)}
+
+/* ── HERO CENTER ── */
+.hero-center{
+  position:relative;z-index:10;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;
+  padding:40px 40px 0;
+}
+.hero-eyebrow{
+  font-family:'DM Mono',monospace;
+  font-size:11px;letter-spacing:.35em;color:var(--signal);
+  margin-bottom:32px;
+  animation:fadeUp .8s both;
+}
+.hero-h1{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(72px,13vw,200px);
+  line-height:.88;
+  letter-spacing:.02em;
+  margin-bottom:0;
+  animation:fadeUp .8s .1s both;
+}
+.hero-h1 .outline{
+  -webkit-text-stroke:1.5px var(--paper);
+  color:transparent;
+}
+.hero-h1 .red{color:var(--signal)}
+
+.hero-sub{
+  font-size:clamp(15px,2vw,20px);
+  color:var(--dim);
+  max-width:560px;
+  line-height:1.65;
+  margin-top:32px;
+  animation:fadeUp .8s .2s both;
+}
+@keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
+
+/* ── LIVE TICKER ── */
+.hero-bottom{
+  position:relative;z-index:10;
+  border-top:1px solid var(--line);
+  overflow:hidden;
+}
+.ticker-wrap{
+  display:flex;
+  white-space:nowrap;
+  padding:14px 0;
+  animation:tickerScroll 22s linear infinite;
+}
+@keyframes tickerScroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.ticker-item{
+  font-family:'DM Mono',monospace;
+  font-size:11px;letter-spacing:.2em;
+  color:var(--dim);
+  padding:0 48px;
+  flex-shrink:0;
+}
+.ticker-item .dot{color:var(--signal);margin-right:12px}
+
+/* ══════════════════════════════
+   STATEMENT
+══════════════════════════════ */
+.statement{
+  padding:140px 60px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:80px;
+  align-items:center;
+  border-bottom:1px solid var(--line);
+}
+.stat-left{position:relative}
+.stat-number{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(100px,18vw,240px);
+  line-height:1;
+  color:transparent;
+  -webkit-text-stroke:1px rgba(240,237,230,.12);
+  position:absolute;
+  top:-30px;left:-20px;
+  user-select:none;
+}
+.stat-headline{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(36px,5vw,68px);
+  line-height:1;
+  position:relative;z-index:1;
+}
+.stat-headline .hl{color:var(--warm)}
+.stat-right{font-size:16px;color:var(--dim);line-height:1.8}
+.stat-right p+p{margin-top:20px}
+.stat-right strong{color:var(--paper);font-weight:500}
+
+/* ══════════════════════════════
+   LIVE DEMO SCREEN MOCKUP
+══════════════════════════════ */
+.demo-section{
+  padding:0 60px 120px;
+  position:relative;
+}
+.demo-label{
+  font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.3em;
+  color:var(--signal);margin-bottom:40px;padding-top:80px;
+  border-top:1px solid var(--line);
+}
+
+.screen-mockup{
+  position:relative;
+  width:100%;
+  aspect-ratio:16/5;
+  background:#000;
+  border:2px solid rgba(240,237,230,.08);
+  overflow:hidden;
+  box-shadow:0 0 120px rgba(255,45,0,.08);
+}
+
+/* LED scoreboard-style content panels */
+.screen-grid{
+  display:grid;
+  grid-template-columns:1.2fr 2fr 1.2fr;
+  height:100%;
+  gap:2px;background:rgba(255,255,255,.03);
+}
+.screen-panel{
+  position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:center;align-items:center;
+  background:var(--ink);padding:20px;
+}
+
+/* Panel izquierdo — RELOJ */
+.panel-clock{background:linear-gradient(135deg,#0a0a12,#13131e)}
+.clock-time{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(32px,5vw,80px);
+  color:var(--warm);
+  letter-spacing:.05em;
+  text-shadow:0 0 40px rgba(255,184,0,.5);
+  animation:clockTick 1s step-end infinite;
+}
+@keyframes clockTick{50%{opacity:.85}}
+.clock-date{
+  font-family:'DM Mono',monospace;font-size:clamp(8px,1vw,12px);
+  letter-spacing:.2em;color:var(--dim);margin-top:4px;
+}
+.clock-event{
+  margin-top:10px;
+  font-family:'DM Mono',monospace;font-size:clamp(7px,.9vw,10px);
+  letter-spacing:.15em;color:var(--signal);
+  border:1px solid rgba(255,45,0,.3);padding:3px 10px;
+}
+
+/* Panel centro — PROMO PRINCIPAL */
+.panel-main{background:#08080C;position:relative;overflow:hidden}
+.panel-main::before{
+  content:'';position:absolute;inset:0;
+  background:
+    linear-gradient(135deg,rgba(255,45,0,.06),transparent 40%),
+    linear-gradient(315deg,rgba(0,194,255,.04),transparent 40%);
+}
+.promo-tag{
+  font-family:'DM Mono',monospace;font-size:clamp(7px,.8vw,10px);
+  letter-spacing:.3em;color:var(--signal);margin-bottom:8px;
+}
+.promo-title{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(24px,4.5vw,72px);
+  letter-spacing:.04em;
+  line-height:1;
+  text-align:center;
+}
+.promo-title .line2{color:var(--warm)}
+.promo-sub{
+  font-family:'DM Mono',monospace;font-size:clamp(6px,.75vw,10px);
+  letter-spacing:.2em;color:var(--dim);margin-top:10px;text-align:center;
+}
+.promo-pill{
+  margin-top:12px;
+  background:var(--signal);
+  color:#fff;
+  font-family:'DM Mono',monospace;font-size:clamp(7px,.8vw,11px);
+  letter-spacing:.15em;padding:5px 16px;
+}
+
+/* Panel derecho — INFO / QR */
+.panel-info{background:linear-gradient(135deg,#0a0a12,#131319)}
+.info-wifi{font-family:'DM Mono',monospace;font-size:clamp(7px,.8vw,10px);letter-spacing:.15em;color:var(--dim);text-align:center}
+.info-wifi span{color:var(--cool);display:block;font-size:clamp(9px,1.2vw,14px);margin-top:3px}
+.qr-box{
+  width:clamp(40px,8vw,80px);height:clamp(40px,8vw,80px);
+  border:1px solid rgba(0,194,255,.3);
+  margin:10px auto;
+  display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(5,1fr);gap:2px;
+  padding:5px;
+}
+.qr-cell{background:rgba(0,194,255,.0)}
+.qr-cell.on{background:var(--cool)}
+
+.scroll-indicator{
+  position:absolute;bottom:12px;left:0;right:0;
+  display:flex;justify-content:center;gap:6px;
+}
+.si-dot{width:4px;height:4px;border-radius:50%;background:rgba(240,237,230,.2)}
+.si-dot.active{background:var(--signal);animation:dotPulse 2s ease infinite}
+@keyframes dotPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.5)}}
+
+/* Content slides cycling */
+.promo-content{position:relative}
+.slide{position:absolute;top:0;left:0;width:100%;text-align:center;opacity:0;transition:opacity .8s ease}
+.slide.show{opacity:1;position:relative}
+
+/* Dimensions label */
+.screen-label{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-top:16px;
+  font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.15em;color:rgba(240,237,230,.2);
+}
+
+/* ══════════════════════════════
+   SECTORES
+══════════════════════════════ */
+.sectors{padding:120px 60px;border-top:1px solid var(--line)}
+.sectors-header{margin-bottom:80px}
+.sectors-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.3em;color:var(--signal);margin-bottom:20px}
+.sectors-title{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(42px,6vw,88px);
+  line-height:.95;
+}
+.sectors-title .grey{color:rgba(240,237,230,.25)}
+
+.sectors-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:2px;
+  background:var(--line);
+}
+
+.sector-card{
+  background:var(--ink);
+  padding:48px 40px;
+  position:relative;
+  overflow:hidden;
+  transition:background .3s ease;
+  display:grid;
+  grid-template-rows:auto auto 1fr auto;
+  gap:16px;
+}
+.sector-card:hover{background:var(--card-bg)}
+
+/* Hover color bar */
+.sector-card::before{
+  content:'';
+  position:absolute;
+  top:0;left:0;right:0;height:3px;
+  background:var(--sc,var(--signal));
+  transform:scaleX(0);transform-origin:left;
+  transition:transform .35s ease;
+}
+.sector-card:hover::before{transform:scaleX(1)}
+
+.sc-num{
+  font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.2em;
+  color:rgba(240,237,230,.2);
+}
+.sc-icon{font-size:36px;margin:-4px 0}
+.sc-title{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:32px;letter-spacing:.04em;
+}
+.sc-sector{font-size:13px;color:var(--dim);font-style:italic;margin-top:-10px}
+
+.sc-screens{
+  display:flex;flex-direction:column;gap:8px;margin:4px 0;
+}
+.sc-screen-item{
+  display:flex;align-items:center;gap:10px;
+  font-size:13px;color:var(--dim);
+}
+.sc-screen-item::before{content:'→';color:var(--sc,var(--signal));flex-shrink:0;font-family:'DM Mono',monospace}
+
+.sc-contents{
+  display:flex;flex-wrap:wrap;gap:6px;
+  border-top:1px solid var(--line);
+  padding-top:16px;
+}
+.sc-tag{
+  font-family:'DM Mono',monospace;font-size:8px;letter-spacing:.12em;
+  border:1px solid rgba(240,237,230,.1);
+  padding:4px 10px;
+  color:rgba(240,237,230,.4);
+  transition:all .2s;
+}
+.sector-card:hover .sc-tag{border-color:var(--sc,var(--signal));color:var(--sc,var(--signal))}
+
+/* Wide card */
+.sector-wide{
+  grid-column:1 / -1;
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:0;
+  background:transparent;
+  padding:0;
+}
+.sector-wide-inner{
+  background:var(--ink);
+  padding:48px 40px;
+  border-right:2px solid var(--line);
+  position:relative;overflow:hidden;
+  transition:background .3s;
+}
+.sector-wide-inner:last-child{border-right:none}
+.sector-wide-inner:hover{background:var(--card-bg)}
+.sector-wide-inner::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:var(--sc,var(--signal));
+  transform:scaleX(0);transform-origin:left;transition:transform .35s;
+}
+.sector-wide-inner:hover::before{transform:scaleX(1)}
+
+/* ══════════════════════════════
+   CONTENIDOS QUE SE MUESTRAN
+══════════════════════════════ */
+.contents-section{
+  padding:120px 60px;
+  background:var(--paper);
+  color:var(--ink);
+  border-top:4px solid var(--signal);
+}
+.contents-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.3em;color:var(--signal);margin-bottom:20px}
+.contents-title{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(48px,7vw,100px);
+  line-height:.9;
+  margin-bottom:60px;
+}
+
+.contents-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:24px;
+}
+.content-card{
+  background:#fff;
+  padding:32px 28px;
+  border:1px solid rgba(8,8,12,.06);
+  position:relative;
+  overflow:hidden;
+  transition:all .3s ease;
+}
+.content-card:hover{transform:translateY(-6px);box-shadow:0 24px 60px rgba(8,8,12,.12)}
+.content-card::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:3px;
+  background:var(--cc,var(--signal));
+}
+.cc-icon{font-size:40px;margin-bottom:16px;display:block}
+.cc-name{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:26px;letter-spacing:.04em;
+  margin-bottom:8px;
+}
+.cc-desc{font-size:13px;color:#666;line-height:1.65}
+
+/* ══════════════════════════════
+   WHY / IMPACTO
+══════════════════════════════ */
+.impact{padding:120px 60px;border-top:1px solid var(--line)}
+.impact-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.3em;color:var(--signal);margin-bottom:20px}
+.impact-title{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(42px,6vw,84px);
+  line-height:.95;
+  margin-bottom:80px;
+}
+.impact-title .warm{color:var(--warm)}
+
+.impact-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:2px;
+  background:var(--line);
+  margin-bottom:80px;
+}
+.impact-block{
+  background:var(--ink);
+  padding:60px 52px;
+  display:flex;gap:32px;align-items:flex-start;
+  transition:background .3s;
+}
+.impact-block:hover{background:var(--card-bg)}
+.ib-number{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:72px;
+  line-height:1;
+  color:var(--signal);
+  flex-shrink:0;
+  min-width:90px;
+}
+.ib-title{
+  font-family:'Familjen Grotesk',sans-serif;
+  font-weight:700;font-size:20px;
+  margin-bottom:10px;
+}
+.ib-desc{font-size:14px;color:var(--dim);line-height:1.7}
+
+/* Quote block */
+.quote-block{
+  border-left:4px solid var(--signal);
+  padding:40px 52px;
+  background:rgba(255,45,0,.04);
+}
+.quote-text{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(28px,4vw,52px);
+  line-height:1.05;
+  margin-bottom:16px;
+}
+.quote-text .hl{color:var(--warm)}
+.quote-attr{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.2em;color:var(--dim)}
+
+/* ══════════════════════════════
+   TECH / CÓMO FUNCIONA
+══════════════════════════════ */
+.how{padding:120px 60px;border-top:1px solid var(--line);background:var(--card-bg)}
+.how-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.3em;color:var(--cool);margin-bottom:20px}
+.how-title{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(42px,6vw,84px);
+  line-height:.95;
+  margin-bottom:72px;
+}
+.how-title .cool{color:var(--cool)}
+
+.how-flow{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  position:relative;
+  gap:0;
+}
+.how-flow::after{
+  content:'';position:absolute;
+  top:40px;left:10%;right:10%;height:1px;
+  background:linear-gradient(90deg,var(--signal),var(--cool));
+  opacity:.3;
+}
+.how-step{
+  padding:0 24px;text-align:center;position:relative;
+}
+.hs-dot{
+  width:80px;height:80px;
+  margin:0 auto 24px;
+  background:var(--ink);
+  border:1px solid;
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;
+  position:relative;z-index:1;
+  transition:all .3s;
+}
+.how-step:hover .hs-dot{transform:scale(1.1)}
+.hs-num{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.2em;color:var(--dim);margin-bottom:6px}
+.hs-name{font-family:'Familjen Grotesk',sans-serif;font-weight:700;font-size:14px;margin-bottom:6px}
+.hs-detail{font-size:12px;color:var(--dim);line-height:1.6}
+
+/* ══════════════════════════════
+   CTA FINAL
+══════════════════════════════ */
+.cta-final{
+  padding:120px 60px;
+  background:var(--signal);
+  color:#fff;
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:60px;
+  align-items:center;
+  position:relative;overflow:hidden;
+}
+.cta-final::before{
+  content:'SIGNAL';
+  font-family:'Bebas Neue',sans-serif;
+  font-size:30vw;
+  position:absolute;
+  right:-5vw;top:50%;transform:translateY(-50%);
+  color:rgba(255,255,255,.06);
+  pointer-events:none;
+  line-height:1;
+}
+.cta-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.3em;opacity:.6;margin-bottom:16px}
+.cta-title{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(42px,6vw,80px);
+  line-height:.95;
+}
+.cta-sub{font-size:16px;opacity:.75;margin-top:16px;max-width:480px;line-height:1.6}
+.cta-btns{display:flex;flex-direction:column;gap:12px;flex-shrink:0;position:relative;z-index:1}
+.btn-white{
+  background:#fff;color:var(--signal);
+  font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.15em;font-weight:500;
+  padding:16px 36px;border:none;
+  transition:all .25s;text-decoration:none;display:block;text-align:center;
+}
+.btn-white:hover{background:var(--ink);color:#fff}
+.btn-outline-w{
+  border:2px solid rgba(255,255,255,.5);color:#fff;
+  font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.15em;
+  padding:14px 36px;transition:all .25s;text-decoration:none;display:block;text-align:center;
+}
+.btn-outline-w:hover{border-color:#fff}
+
+/* ── FOOTER ── */
+footer{
+  padding:48px 60px;
+  display:flex;justify-content:space-between;align-items:center;
+  border-top:1px solid var(--line);
+}
+.f-logo{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.1em}
+.f-logo span{color:var(--signal)}
+.f-copy{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.15em;color:var(--dim)}
+
+/* ── UTILS ── */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .7s ease,transform .7s ease}
+.reveal.in{opacity:1;transform:none}
+
+@media(max-width:1024px){
+  nav{padding:20px 24px}
+  .nav-links{display:none}
+  .hero-h1{font-size:clamp(56px,16vw,120px)}
+  section,.statement,.sectors,.impact,.how,.cta-final,.contents-section,.demo-section{padding-left:24px;padding-right:24px}
+  .statement{grid-template-columns:1fr;gap:40px}
+  .sectors-grid{grid-template-columns:1fr}
+  .sector-wide{grid-template-columns:1fr}
+  .sector-wide-inner{border-right:none;border-bottom:2px solid var(--line)}
+  .contents-grid{grid-template-columns:repeat(2,1fr)}
+  .impact-grid{grid-template-columns:1fr}
+  .how-flow{grid-template-columns:1fr;gap:32px}
+  .how-flow::after{display:none}
+  .cta-final{grid-template-columns:1fr;text-align:center}
+  .cta-btns{flex-direction:row}
+  footer{flex-direction:column;gap:16px;text-align:center}
+  .screen-mockup{aspect-ratio:unset; height:auto;}
+  .screen-grid{grid-template-columns:1fr; grid-template-rows:auto auto auto;}
+  .screen-panel{min-height:180px;}
+  .panel-main{min-height:260px;}
+  #matchCanvas{position:absolute;inset:0;width:100%!important;height:100%!important;}
+}
+</style>
+</head>
+<body>
+
+<div id="cur"></div>
+<div id="cur2"></div>
+
+<!-- ══════════ HERO ══════════ -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="screen-glow"></div>
+  <div class="ticker-bg"></div>
+
+  <nav>
+    <div class="nav-logo">SIG<span>N</span>AL</div>
+    <div class="nav-links">
+      <span>SECTORES</span>
+      <span>CONTENIDOS</span>
+      <span>TECNOLOGÍA</span>
+      <span>CONTACTO</span>
+    </div>
+    <div class="nav-badge">DIGITAL SIGNAGE</div>
+  </nav>
+
+  <div class="hero-center">
+    <div class="hero-eyebrow">// INTERVENCIÓN DE SEÑALES · PRESENCIA DE MARCA EN VIVO</div>
+    <h1 class="hero-h1">
+      <span class="outline">CADA</span><br>
+      <span class="red">PAN</span><span class="outline">TALLA</span><br>
+      <span>UNA OPORTUNIDAD</span>
+    </h1>
+    <p class="hero-sub">
+      Convertimos las pantallas de eventos, estadios, hoteles, tiendas y espacios públicos en poderosos canales de comunicación de marca — en tiempo real, con contenido dinámico que captura la atención cuando más importa.
+    </p>
+  </div>
+
+  <div class="hero-bottom">
+    <div class="ticker-wrap" id="ticker">
+      <span class="ticker-item"><span class="dot">●</span>DIGITAL SIGNAGE EN VIVO</span>
+      <span class="ticker-item"><span class="dot">●</span>INTERVENCIÓN DE SEÑALES</span>
+      <span class="ticker-item"><span class="dot">●</span>CONTENIDO DINÁMICO</span>
+      <span class="ticker-item"><span class="dot">●</span>ESTADIOS · EVENTOS · HOTELES</span>
+      <span class="ticker-item"><span class="dot">●</span>MODA · RETAIL · GOBIERNO</span>
+      <span class="ticker-item"><span class="dot">●</span>GESTIÓN CENTRALIZADA</span>
+      <span class="ticker-item"><span class="dot">●</span>IMPACTO EN TIEMPO REAL</span>
+      <span class="ticker-item"><span class="dot">●</span>DIGITAL SIGNAGE EN VIVO</span>
+      <span class="ticker-item"><span class="dot">●</span>INTERVENCIÓN DE SEÑALES</span>
+      <span class="ticker-item"><span class="dot">●</span>CONTENIDO DINÁMICO</span>
+      <span class="ticker-item"><span class="dot">●</span>ESTADIOS · EVENTOS · HOTELES</span>
+      <span class="ticker-item"><span class="dot">●</span>MODA · RETAIL · GOBIERNO</span>
+      <span class="ticker-item"><span class="dot">●</span>GESTIÓN CENTRALIZADA</span>
+      <span class="ticker-item"><span class="dot">●</span>IMPACTO EN TIEMPO REAL</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ STATEMENT ══════════ -->
+<section class="statement reveal">
+  <div class="stat-left">
+    <div class="stat-number">8s</div>
+    <h2 class="stat-headline">LA ATENCIÓN<br>QUE <span class="hl">NO PUEDES</span><br>IGNORAR</h2>
+  </div>
+  <div class="stat-right">
+    <p>En un partido de fútbol, en un desfile de moda, en el lobby de un hotel 5 estrellas — <strong>la gente ya tiene los ojos en las pantallas.</strong> Nosotros aprovechamos ese momento.</p>
+    <p>Intervenimos las señales de eventos para <strong>insertar tu marca</strong> en el flujo natural de atención del público: promociones, anuncios, datos en vivo, menús, temporizadores y más.</p>
+    <p>No compramos atención. La <strong>encontramos donde ya existe</strong> y la transformamos en impacto de marca medible.</p>
+  </div>
+</section>
+
+<!-- ══════════ SCREEN MOCKUP ══════════ -->
+<div class="demo-section reveal">
+  <div class="demo-label">// SIMULACIÓN DE PANTALLA EN EVENTO — CONTENIDO DINÁMICO EN TIEMPO REAL</div>
+
+  <div class="screen-mockup">
+    <div class="screen-grid">
+
+      <!-- Panel RELOJ / INFO EVENTO -->
+      <div class="screen-panel panel-clock">
+        <div class="clock-time" id="clockTime">--:--</div>
+        <div class="clock-date" id="clockDate">-- / -- / ----</div>
+        <div class="clock-event" id="clockEvent">⬤ EVENTO EN VIVO</div>
+        <div style="margin-top:16px;font-family:'DM Mono',monospace;font-size:clamp(6px,.7vw,9px);letter-spacing:.15em;color:rgba(240,237,230,.2);text-align:center">TIEMPO RESTANTE</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(20px,3.5vw,48px);color:rgba(255,184,0,.7);text-shadow:0 0 20px rgba(255,184,0,.4)" id="countdown">45:00</div>
+        <div style="display:flex;gap:8px;margin-top:16px">
+          <div style="width:clamp(20px,3vw,40px);height:clamp(3px,0.5vw,6px);background:var(--signal);border-radius:2px"></div>
+          <div style="width:clamp(10px,1.5vw,20px);height:clamp(3px,0.5vw,6px);background:rgba(240,237,230,.15);border-radius:2px"></div>
+          <div style="width:clamp(14px,2vw,28px);height:clamp(3px,0.5vw,6px);background:rgba(240,237,230,.1);border-radius:2px"></div>
+        </div>
+      </div>
+
+      <!-- Panel PRINCIPAL — SIMULACIÓN PARTIDO EN VIVO -->
+      <div class="screen-panel panel-main" id="mainPanel" style="padding:0;position:relative;overflow:hidden;background:#1a3a1a;">
+
+        <!-- CANVAS: campo de fútbol animado -->
+        <canvas id="matchCanvas" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+
+        <!-- OVERLAY: señalética de signage superpuesta al partido -->
+        <div id="signageOverlay" style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between;pointer-events:none;">
+
+          <!-- TOP BAR — Marcador estilo broadcast -->
+          <div style="display:flex;justify-content:center;padding:clamp(4px,1vw,12px) 0;z-index:10;">
+            <div id="scoreboard" style="
+              display:flex;align-items:center;gap:0;
+              background:rgba(0,0,0,.82);
+              backdrop-filter:blur(4px);
+              border:1px solid rgba(255,255,255,.08);
+              overflow:hidden;
+              font-family:'Bebas Neue',sans-serif;
+              font-size:clamp(10px,1.8vw,22px);
+              letter-spacing:.05em;
+            ">
+              <!-- Real Madrid -->
+              <div style="display:flex;align-items:center;gap:clamp(4px,.6vw,10px);padding:clamp(3px,.5vw,8px) clamp(6px,1vw,16px);background:rgba(255,255,255,.06);">
+                <span style="font-size:clamp(8px,1.2vw,16px)">⚪</span>
+                <span style="color:#fff;letter-spacing:.08em">REAL MADRID</span>
+              </div>
+              <!-- Score -->
+              <div style="display:flex;align-items:center;gap:0;">
+                <div id="scoreHome" style="padding:clamp(3px,.5vw,8px) clamp(8px,1.2vw,18px);background:var(--signal);color:#fff;font-size:clamp(12px,2.2vw,28px);">2</div>
+                <div style="padding:clamp(3px,.5vw,8px) clamp(4px,.7vw,10px);color:rgba(255,255,255,.4);font-size:clamp(10px,1.5vw,18px)">—</div>
+                <div id="scoreAway" style="padding:clamp(3px,.5vw,8px) clamp(8px,1.2vw,18px);background:#A50044;color:#fff;font-size:clamp(12px,2.2vw,28px);">1</div>
+              </div>
+              <!-- Barcelona -->
+              <div style="display:flex;align-items:center;gap:clamp(4px,.6vw,10px);padding:clamp(3px,.5vw,8px) clamp(6px,1vw,16px);background:rgba(255,255,255,.06);">
+                <span style="color:#fff;letter-spacing:.08em">BARCELONA</span>
+                <span style="font-size:clamp(8px,1.2vw,16px)">🔵🔴</span>
+              </div>
+              <!-- Minuto -->
+              <div style="padding:clamp(3px,.5vw,8px) clamp(6px,1vw,14px);background:rgba(255,45,0,.15);border-left:1px solid rgba(255,45,0,.3);display:flex;align-items:center;gap:4px;">
+                <span style="width:6px;height:6px;background:var(--signal);border-radius:50%;display:inline-block;animation:blink 1s infinite;flex-shrink:0"></span>
+                <span id="matchMinute" style="color:var(--warm);font-size:clamp(9px,1.4vw,17px)">74'</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- MIDDLE — Contenido de signage rotativo (aparece sobre el partido) -->
+          <div id="signageCard" style="
+            margin:0 clamp(6px,1.5vw,20px);
+            background:rgba(0,0,0,.78);
+            backdrop-filter:blur(6px);
+            border-left:3px solid var(--signal);
+            padding:clamp(6px,1vw,14px) clamp(8px,1.2vw,18px);
+            display:flex;align-items:center;gap:clamp(8px,1.2vw,16px);
+            transform:translateY(0);
+            transition:opacity .5s ease, transform .5s ease;
+          ">
+            <div id="signageIcon" style="font-size:clamp(16px,2.5vw,32px);flex-shrink:0">🎁</div>
+            <div>
+              <div id="signageLabel" style="font-family:'DM Mono',monospace;font-size:clamp(5px,.75vw,9px);letter-spacing:.2em;color:var(--signal);margin-bottom:2px">PATROCINADOR OFICIAL · OFERTA EN VIVO</div>
+              <div id="signageText" style="font-family:'Bebas Neue',sans-serif;font-size:clamp(10px,1.8vw,22px);color:#fff;line-height:1.1;">2×1 EN PALCOS VIP · SOLO DURANTE EL DESCANSO</div>
+            </div>
+            <div id="signagePill" style="margin-left:auto;flex-shrink:0;background:var(--signal);color:#fff;font-family:'DM Mono',monospace;font-size:clamp(5px,.65vw,8px);letter-spacing:.1em;padding:clamp(3px,.4vw,6px) clamp(6px,.9vw,12px);white-space:nowrap;">↗ ESCANEA</div>
+          </div>
+
+          <!-- BOTTOM BAR — Ticker de info -->
+          <div style="background:rgba(0,0,0,.75);border-top:2px solid var(--signal);padding:clamp(3px,.5vw,7px) 0;overflow:hidden;">
+            <div id="matchTicker" style="
+              display:flex;white-space:nowrap;
+              font-family:'DM Mono',monospace;font-size:clamp(5px,.8vw,10px);letter-spacing:.15em;
+              color:rgba(240,237,230,.7);
+              animation:tickerScroll 18s linear infinite;
+            ">
+              <span style="padding:0 24px"><span style="color:var(--signal)">●</span> LALIGA · JORNADA 28 · SANTIAGO BERNABÉU</span>
+              <span style="padding:0 24px"><span style="color:var(--warm)">⚽</span> 23' VINICIUS JR. — REAL MADRID</span>
+              <span style="padding:0 24px"><span style="color:#A50044">⚽</span> 51' LEWANDOWSKI — BARCELONA</span>
+              <span style="padding:0 24px"><span style="color:var(--warm)">⚽</span> 68' BELLINGHAM — REAL MADRID</span>
+              <span style="padding:0 24px"><span style="color:var(--cool)">📶</span> WIFI: BERNABEU_VIP · SIN CONTRASEÑA</span>
+              <span style="padding:0 24px"><span style="color:var(--signal)">🍺</span> ZONA HOSPITALITY NIVEL 3 · OFERTA 2×1</span>
+              <span style="padding:0 24px"><span style="color:var(--signal)">●</span> LALIGA · JORNADA 28 · SANTIAGO BERNABÉU</span>
+              <span style="padding:0 24px"><span style="color:var(--warm)">⚽</span> 23' VINICIUS JR. — REAL MADRID</span>
+              <span style="padding:0 24px"><span style="color:#A50044">⚽</span> 51' LEWANDOWSKI — BARCELONA</span>
+              <span style="padding:0 24px"><span style="color:var(--warm)">⚽</span> 68' BELLINGHAM — REAL MADRID</span>
+              <span style="padding:0 24px"><span style="color:var(--cool)">📶</span> WIFI: BERNABEU_VIP · SIN CONTRASEÑA</span>
+              <span style="padding:0 24px"><span style="color:var(--signal)">🍺</span> ZONA HOSPITALITY NIVEL 3 · OFERTA 2×1</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- GOAL flash overlay -->
+        <div id="goalFlash" style="position:absolute;inset:0;background:rgba(255,184,0,0);z-index:20;pointer-events:none;transition:background .1s;display:flex;align-items:center;justify-content:center;">
+          <div id="goalText" style="font-family:'Bebas Neue',sans-serif;font-size:clamp(24px,5vw,72px);color:#fff;text-shadow:0 0 40px var(--warm),0 0 80px var(--warm);opacity:0;transform:scale(.7);transition:all .3s ease;letter-spacing:.1em;">⚽ GOOOL!</div>
+        </div>
+
+        <div class="scroll-indicator" style="z-index:15;bottom:clamp(20px,3.5vw,40px);">
+          <div class="si-dot active" id="sd0"></div>
+          <div class="si-dot" id="sd1"></div>
+          <div class="si-dot" id="sd2"></div>
+          <div class="si-dot" id="sd3"></div>
+        </div>
+      </div>
+
+      <!-- Panel DERECHO — WIFI / INFO -->
+      <div class="screen-panel panel-info">
+        <div style="font-size:clamp(20px,3vw,48px);margin-bottom:8px">📶</div>
+        <div class="info-wifi">
+          WIFI DEL EVENTO<br>
+          <span id="wifiName">STADIUM_VIP</span>
+        </div>
+        <div class="qr-box" id="qrBox"></div>
+        <div style="font-family:'DM Mono',monospace;font-size:clamp(6px,.7vw,9px);letter-spacing:.12em;color:rgba(0,194,255,.6);text-align:center;margin-top:4px">ESCANEA PARA CONECTAR</div>
+        <div style="margin-top:clamp(8px,1.5vw,20px);border-top:1px solid rgba(240,237,230,.06);padding-top:clamp(8px,1.5vw,16px);width:100%;text-align:center">
+          <div style="font-family:'DM Mono',monospace;font-size:clamp(5px,.65vw,9px);letter-spacing:.15em;color:rgba(240,237,230,.25)">PRÓXIMO ANUNCIO EN</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(16px,2.5vw,36px);color:rgba(240,237,230,.5)" id="nextSlide">0:15</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="screen-label">
+    <span>SIGNAL CMS · GESTIÓN CENTRALIZADA DE CONTENIDO</span>
+    <span>HD · 1920×540 · 60fps · LATENCIA &lt;200ms</span>
+  </div>
+</div>
+
+<!-- ══════════ SECTORES ══════════ -->
+<section class="sectors">
+  <div class="sectors-header reveal">
+    <div class="sectors-label">// SECTORES QUE ATENDEMOS</div>
+    <h2 class="sectors-title">
+      TU MARCA<br>
+      <span class="grey">EN CADA</span><br>
+      ESPACIO
+    </h2>
+  </div>
+
+  <div class="sectors-grid">
+
+    <!-- DEPORTES / EVENTOS -->
+    <div class="sector-card reveal" style="--sc:#FF2D00">
+      <div class="sc-num">01 · DEPORTES & EVENTOS</div>
+      <div class="sc-icon">🏟️</div>
+      <div>
+        <div class="sc-title">ESTADIOS &<br>ARENAS</div>
+        <div class="sc-sector">Eventos Masivos · Conciertos · Shows</div>
+      </div>
+      <div class="sc-screens">
+        <div class="sc-screen-item">Marcadores y pantallas LED perimetrales</div>
+        <div class="sc-screen-item">Pantallas de acceso y pasillos</div>
+        <div class="sc-screen-item">Displays de palcos y zonas VIP</div>
+        <div class="sc-screen-item">Video scoreboard central</div>
+      </div>
+      <div class="sc-contents">
+        <span class="sc-tag">ANUNCIOS</span><span class="sc-tag">PROMOS DESCANSO</span><span class="sc-tag">MARCADOR</span><span class="sc-tag">TIEMPO</span><span class="sc-tag">SORTEOS</span>
+      </div>
+    </div>
+
+    <!-- MODA -->
+    <div class="sector-card reveal" style="--sc:#FFB800">
+      <div class="sc-num">02 · MODA & FASHION</div>
+      <div class="sc-icon">👗</div>
+      <div>
+        <div class="sc-title">PASARELAS &<br>SHOWROOMS</div>
+        <div class="sc-sector">Fashion Week · Lanzamientos · Desfiles</div>
+      </div>
+      <div class="sc-screens">
+        <div class="sc-screen-item">Pantallas de pasarela y backstage</div>
+        <div class="sc-screen-item">Videowalls de entrada y lounge</div>
+        <div class="sc-screen-item">Displays de producto en showroom</div>
+        <div class="sc-screen-item">Señalización de marca en runway</div>
+      </div>
+      <div class="sc-contents">
+        <span class="sc-tag">LOOKBOOK</span><span class="sc-tag">COLECCIONES</span><span class="sc-tag">PRECIO</span><span class="sc-tag">HASHTAG</span><span class="sc-tag">CONTEO</span>
+      </div>
+    </div>
+
+    <!-- HOTELERÍA -->
+    <div class="sector-card reveal" style="--sc:#00C2FF">
+      <div class="sc-num">03 · HOTELERÍA & TURISMO</div>
+      <div class="sc-icon">🏨</div>
+      <div>
+        <div class="sc-title">HOTELES &<br>RESORTS</div>
+        <div class="sc-sector">Lobby · Restaurantes · Salones de Evento</div>
+      </div>
+      <div class="sc-screens">
+        <div class="sc-screen-item">Pantallas de lobby y recepción</div>
+        <div class="sc-screen-item">Displays de restaurante y bar</div>
+        <div class="sc-screen-item">Señalización de salones y salas</div>
+        <div class="sc-screen-item">Información en pasillos y elevadores</div>
+      </div>
+      <div class="sc-contents">
+        <span class="sc-tag">MENÚS</span><span class="sc-tag">CLIMA</span><span class="sc-tag">HORARIOS</span><span class="sc-tag">PROMO SPA</span><span class="sc-tag">BIENVENIDA</span>
+      </div>
+    </div>
+
+    <!-- Row amplio con 3 sectores -->
+    <div class="sector-wide reveal">
+
+      <!-- RETAIL / TIENDAS -->
+      <div class="sector-wide-inner" style="--sc:#A3FF4D">
+        <div class="sc-num">04 · RETAIL & TIENDAS</div>
+        <div class="sc-icon" style="margin:12px 0">🛍️</div>
+        <div class="sc-title">TIENDAS &<br>CENTROS<br>COMERCIALES</div>
+        <div class="sc-sector" style="font-size:13px;color:var(--dim);font-style:italic;margin:8px 0">Punto de Venta · Brand Stores · Plazas</div>
+        <div class="sc-screens" style="margin:12px 0">
+          <div class="sc-screen-item">Vitrinas digitales y fachadas LED</div>
+          <div class="sc-screen-item">Displays en punto de venta</div>
+          <div class="sc-screen-item">Pantallas en cajas y filas</div>
+        </div>
+        <div class="sc-contents">
+          <span class="sc-tag">PRECIO</span><span class="sc-tag">OFERTA</span><span class="sc-tag">NUEVO</span><span class="sc-tag">DESCUENTO</span>
+        </div>
+      </div>
+
+      <!-- GOBIERNO -->
+      <div class="sector-wide-inner" style="--sc:#FF6BDD">
+        <div class="sc-num">05 · GOBIERNO & SECTOR PÚBLICO</div>
+        <div class="sc-icon" style="margin:12px 0">🏛️</div>
+        <div class="sc-title">INSTITUCIONES<br>& ESPACIOS<br>PÚBLICOS</div>
+        <div class="sc-sector" style="font-size:13px;color:var(--dim);font-style:italic;margin:8px 0">Dependencias · Plazas · Eventos Cívicos</div>
+        <div class="sc-screens" style="margin:12px 0">
+          <div class="sc-screen-item">Pantallas en oficinas de atención</div>
+          <div class="sc-screen-item">Señalización en plazas y parques</div>
+          <div class="sc-screen-item">Displays en actos y ceremonias</div>
+        </div>
+        <div class="sc-contents">
+          <span class="sc-tag">AVISOS</span><span class="sc-tag">EMERGENCIA</span><span class="sc-tag">TURNO</span><span class="sc-tag">AGENDA</span>
+        </div>
+      </div>
+
+      <!-- CORPORATIVO / B2B -->
+      <div class="sector-wide-inner" style="--sc:#FF8F00">
+        <div class="sc-num">06 · CORPORATIVO & B2B</div>
+        <div class="sc-icon" style="margin:12px 0">🏢</div>
+        <div class="sc-title">CONGRESOS<br>& FERIAS<br>EMPRESARIALES</div>
+        <div class="sc-sector" style="font-size:13px;color:var(--dim);font-style:italic;margin:8px 0">Expos · Cumbres · Lanzamientos B2B</div>
+        <div class="sc-screens" style="margin:12px 0">
+          <div class="sc-screen-item">Señalización de stands y pasillos</div>
+          <div class="sc-screen-item">Pantallas de agenda y ponentes</div>
+          <div class="sc-screen-item">Displays de patrocinadores</div>
+        </div>
+        <div class="sc-contents">
+          <span class="sc-tag">AGENDA</span><span class="sc-tag">SPONSOR</span><span class="sc-tag">KPI LIVE</span><span class="sc-tag">GALERÍA</span>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+<!-- ══════════ CONTENIDOS ══════════ -->
+<section class="contents-section">
+  <div class="contents-label">// LO QUE SE MUESTRA EN PANTALLA</div>
+  <h2 class="contents-title">CONTENIDO<br>QUE FUNCIONA</h2>
+
+  <div class="contents-grid">
+    <div class="content-card reveal" style="--cc:#FF2D00">
+      <span class="cc-icon">⏱️</span>
+      <div class="cc-name">RELOJES & CONTEOS</div>
+      <div class="cc-desc">Cuenta regresiva al inicio, tiempos de descanso, temporizadores de evento. Mantiene al público enganchado con el momento.</div>
+    </div>
+    <div class="content-card reveal" style="--cc:#FFB800">
+      <span class="cc-icon">🎁</span>
+      <div class="cc-name">PROMOCIONES EN VIVO</div>
+      <div class="cc-desc">Descuentos activos en ese momento, ofertas de descanso, combos de consumición. La oferta llega cuando el público puede actuar.</div>
+    </div>
+    <div class="content-card reveal" style="--cc:#00C2FF">
+      <span class="cc-icon">📋</span>
+      <div class="cc-name">MENÚS & CARTAS</div>
+      <div class="cc-desc">Menú digital actualizable en tiempo real para restaurantes, bares, cafeterías y zonas de alimentos en cualquier tipo de evento.</div>
+    </div>
+    <div class="content-card reveal" style="--cc:#A3FF4D">
+      <span class="cc-icon">📢</span>
+      <div class="cc-name">ANUNCIOS & AVISOS</div>
+      <div class="cc-desc">Comunicados oficiales, avisos de seguridad, cambios de programa, información de emergencia. Comunicación directa y masiva.</div>
+    </div>
+    <div class="content-card reveal" style="--cc:#FF6BDD">
+      <span class="cc-icon">🌤️</span>
+      <div class="cc-name">CLIMA & DATOS EN VIVO</div>
+      <div class="cc-desc">Temperatura, alertas meteorológicas, estadísticas del evento, marcadores deportivos. Información útil en tiempo real.</div>
+    </div>
+    <div class="content-card reveal" style="--cc:#FF8F00">
+      <span class="cc-icon">📱</span>
+      <div class="cc-name">REDES SOCIALES</div>
+      <div class="cc-desc">Feed de Instagram, tweets del evento, hashtag wall, reacciones en vivo. Conecta lo digital con lo físico frente a toda la audiencia.</div>
+    </div>
+    <div class="content-card reveal" style="--cc:#7B2FFF">
+      <span class="cc-icon">🎰</span>
+      <div class="cc-name">SORTEOS & DINÁMICAS</div>
+      <div class="cc-desc">Ruletas en vivo, ganadores al instante, dinámicas de participación. Activa a la audiencia y crea momentos de marca memorables.</div>
+    </div>
+    <div class="content-card reveal" style="--cc:#00C2FF">
+      <span class="cc-icon">🗺️</span>
+      <div class="cc-name">SEÑALIZACIÓN & MAPAS</div>
+      <div class="cc-desc">Directorios interactivos, mapas de venue, indicadores de aforo, guías de salida. El espacio se vuelve inteligente y navegable.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ IMPACTO ══════════ -->
+<section class="impact">
+  <div class="impact-label reveal">// POR QUÉ FUNCIONA</div>
+  <h2 class="impact-title reveal">EL PODER DE<br>LA <span class="warm">PANTALLA</span><br>CORRECTA</h2>
+
+  <div class="impact-grid">
+    <div class="impact-block reveal">
+      <div class="ib-number">400%</div>
+      <div>
+        <div class="ib-title">Más retención que un anuncio convencional</div>
+        <div class="ib-desc">La señalización digital en contexto de evento captura la atención de forma natural — no interrumpe, forma parte de la experiencia. El público ya mira las pantallas.</div>
+      </div>
+    </div>
+    <div class="impact-block reveal">
+      <div class="ib-number">8s</div>
+      <div>
+        <div class="ib-title">Tiempo de atención promedio por pantalla en evento</div>
+        <div class="ib-desc">Ocho segundos que pueden transformarse en una decisión de compra, un QR escaneado, una marca recordada. El momento exacto importa.</div>
+      </div>
+    </div>
+    <div class="impact-block reveal">
+      <div class="ib-number">1:∞</div>
+      <div>
+        <div class="ib-title">Una pantalla, miles de impactos simultáneos</div>
+        <div class="ib-desc">Un solo mensaje en la pantalla central de un estadio llega a 40,000 personas al mismo tiempo. La escala es imposible de replicar con cualquier otro medio.</div>
+      </div>
+    </div>
+    <div class="impact-block reveal">
+      <div class="ib-number">CMS</div>
+      <div>
+        <div class="ib-title">Control total en tiempo real desde cualquier lugar</div>
+        <div class="ib-desc">Nuestro sistema de gestión centralizada permite cambiar contenido, activar promociones y actualizar datos en segundos desde un dashboard web, sin depender de personal técnico en sitio.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="quote-block reveal">
+    <div class="quote-text">
+      "EN UN PARTIDO, LA GENTE<br>NO PUEDE QUITAR LOS OJOS<br>DE LAS <span class="hl">PANTALLAS.</span><br>ESA ES EXACTAMENTE<br>LA OPORTUNIDAD."
+    </div>
+    <div class="quote-attr">// FILOSOFÍA SIGNAL · INTERVENCIÓN DE SEÑALES DE EVENTO</div>
+  </div>
+</section>
+
+<!-- ══════════ CÓMO FUNCIONA ══════════ -->
+<section class="how">
+  <div class="how-label reveal">// TECNOLOGÍA & PROCESO</div>
+  <h2 class="how-title reveal">ASÍ DE<br><span class="cool">SENCILLO</span></h2>
+
+  <div class="how-flow reveal">
+    <div class="how-step">
+      <div class="hs-dot" style="border-color:var(--signal);box-shadow:0 0 30px rgba(255,45,0,.2)">🎯</div>
+      <div class="hs-num">01 · BRIEF</div>
+      <div class="hs-name">Definimos el contexto</div>
+      <div class="hs-detail">Tipo de evento, venue, pantallas disponibles, objetivos de marca y audiencia esperada.</div>
+    </div>
+    <div class="how-step">
+      <div class="hs-dot" style="border-color:var(--warm);box-shadow:0 0 30px rgba(255,184,0,.2)">🎨</div>
+      <div class="hs-num">02 · DISEÑO</div>
+      <div class="hs-name">Creamos el contenido</div>
+      <div class="hs-detail">Animaciones, gráficas, textos y lógica de rotación diseñados para el formato y el público.</div>
+    </div>
+    <div class="how-step">
+      <div class="hs-dot" style="border-color:var(--cool);box-shadow:0 0 30px rgba(0,194,255,.2)">⚡</div>
+      <div class="hs-num">03 · INSTALACIÓN</div>
+      <div class="hs-name">Conectamos las señales</div>
+      <div class="hs-detail">Integración con el sistema de pantallas del venue o instalación de hardware propio según el caso.</div>
+    </div>
+    <div class="how-step">
+      <div class="hs-dot" style="border-color:#A3FF4D;box-shadow:0 0 30px rgba(163,255,77,.2)">📡</div>
+      <div class="hs-num">04 · LIVE</div>
+      <div class="hs-name">Activamos en tiempo real</div>
+      <div class="hs-detail">El contenido se publica y gestiona desde nuestro CMS cloud. Cambios al instante, desde cualquier dispositivo.</div>
+    </div>
+    <div class="how-step">
+      <div class="hs-dot" style="border-color:#FF6BDD;box-shadow:0 0 30px rgba(255,107,221,.2)">📊</div>
+      <div class="hs-num">05 · RESULTADOS</div>
+      <div class="hs-name">Medimos el impacto</div>
+      <div class="hs-detail">Reporte de impresiones, tiempo de exposición, interacciones y recomendaciones para la siguiente activación.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ CTA ══════════ -->
+<section class="cta-final">
+  <div>
+    <div class="cta-label">// SIGUIENTE PASO</div>
+    <h2 class="cta-title">¿CUÁNDO ES<br>TU PRÓXIMO<br>EVENTO?</h2>
+    <p class="cta-sub">Dinos el tipo de evento, el venue y el objetivo. En 48 horas te presentamos una propuesta de intervención de señales con el contenido y el plan de activación.</p>
+  </div>
+  <div class="cta-btns">
+    <a href="#" class="btn-white">SOLICITAR PROPUESTA</a>
+    <a href="#" class="btn-outline-w">VER CASOS DE USO</a>
+  </div>
+</section>
+
+<footer>
+  <div>
+    <div class="f-logo">SIG<span>N</span>AL</div>
+    <div class="f-copy" style="margin-top:6px">INTERVENCIÓN DE SEÑALES · PRESENCIA DE MARCA EN VIVO</div>
+  </div>
+  <div class="f-copy">DIGITAL SIGNAGE · HW + SW · CMS CLOUD</div>
+</footer>
+
+<script>
+/* ── CURSOR ── */
+const cur = document.getElementById('cur'), cur2 = document.getElementById('cur2');
+let rx=0,ry=0,cx=0,cy=0;
+
+function moveCursor(x,y){
+  cx=x; cy=y;
+  cur.style.left=cx-5+'px'; cur.style.top=cy-5+'px';
+}
+
+document.addEventListener('mousemove', e=>{ moveCursor(e.clientX, e.clientY); });
+
+// Touch support — follow finger in real time
+document.addEventListener('touchstart', e=>{ const t=e.touches[0]; moveCursor(t.clientX,t.clientY); cur.style.opacity='1'; }, {passive:true});
+document.addEventListener('touchmove',  e=>{ const t=e.touches[0]; moveCursor(t.clientX,t.clientY); }, {passive:true});
+document.addEventListener('touchend',   ()=>{ cur.style.opacity='0'; cur2.style.opacity='0'; }, {passive:true});
+
+(function animC(){
+  rx+=(cx-rx)*.18; ry+=(cy-ry)*.18;
+  cur2.style.left=rx-16+'px'; cur2.style.top=ry-16+'px';
+  requestAnimationFrame(animC);
+})();
+document.querySelectorAll('a,button,.sector-card,.sector-wide-inner,.content-card,.impact-block,.how-step').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{cur.style.transform='scale(3)';cur2.style.transform='scale(1.4)';cur2.style.opacity='.9'});
+  el.addEventListener('mouseleave',()=>{cur.style.transform='scale(1)';cur2.style.transform='scale(1)';cur2.style.opacity='.6'});
+});
+
+/* ── CLOCK ── */
+function updateClock(){
+  const now=new Date();
+  const h=String(now.getHours()).padStart(2,'0'),m=String(now.getMinutes()).padStart(2,'0'),s=String(now.getSeconds()).padStart(2,'0');
+  document.getElementById('clockTime').textContent=h+':'+m+':'+s;
+  const days=['DOM','LUN','MAR','MIÉ','JUE','VIE','SÁB'];
+  const months=['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+  document.getElementById('clockDate').textContent=days[now.getDay()]+' '+String(now.getDate()).padStart(2,'0')+' '+months[now.getMonth()]+' '+now.getFullYear();
+}
+updateClock();setInterval(updateClock,1000);
+
+/* ── COUNTDOWN ── */
+let seconds=2700;
+setInterval(()=>{
+  if(seconds>0)seconds--;
+  const m=Math.floor(seconds/60),s=seconds%60;
+  document.getElementById('countdown').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+},1000);
+
+/* ══════════════════════════════════════════
+   MULTI-SPORT CANVAS ENGINE
+   Rota cada 3s: Soccer → Basketball → Baseball → Rugby → UFC → NFL
+══════════════════════════════════════════ */
+const canvas = document.getElementById('matchCanvas');
+const ctx = canvas.getContext('2d');
+const W = () => canvas.offsetWidth;
+const H = () => canvas.offsetHeight;
+
+function resizeCanvas(){
+  var dpr = Math.min(window.devicePixelRatio||1, 2);
+  var w = canvas.offsetWidth, h = canvas.offsetHeight;
+  if(!w||!h) return;
+  canvas.width  = Math.round(w * dpr);
+  canvas.height = Math.round(h * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // reset + scale — avoids accumulation
+}
+resizeCanvas();
+var resizeTimer;
+window.addEventListener('resize', ()=>{
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(()=>{
+    resizeCanvas();
+    initSport(currentSport);
+  }, 120);
+});
+
+/* ─── SPORT CONFIG ─── */
+const SPORTS = [
+  { id:'soccer',      label:'PREMIER LEAGUE',      teams:['MAN CITY','ARSENAL'],   score:'2 — 1',  time:"74'",     color:'#1d5c1d', accent:'#00FF87' },
+  { id:'basketball',  label:'NBA · PLAYOFFS',       teams:['LAKERS','CELTICS'],     score:'98 — 94',time:"Q3 4:12", color:'#8B4513', accent:'#FFA500' },
+  { id:'baseball',    label:'MLB · WORLD SERIES',   teams:['YANKEES','RED SOX'],    score:'4 — 3',  time:"7th INN", color:'#1a3a1a', accent:'#E8E0D0' },
+  { id:'rugby',       label:'SIX NATIONS',          teams:['ENGLAND','IRELAND'],    score:'21 — 14',time:"58'",     color:'#2d4a1e', accent:'#FFFFFF' },
+  { id:'ufc',         label:'UFC 300 · MAIN EVENT', teams:['JONES','ASPINALL'],     score:'RD 3',   time:"4:22",    color:'#1a0a0a', accent:'#FF2D00' },
+  { id:'nfl',         label:'NFL · WEEK 14',        teams:['STEELERS','PATRIOTS'],  score:'17 — 14',time:"Q4 2:38", color:'#1a1a2e', accent:'#FFB612' },
+];
+
+/* ─── SHARED ENTITY SYSTEM ─── */
+let entities = [];  // {x,y,vx,vy,team,r, ...extras}
+let ball = {x:0,y:0,vx:0,vy:0,r:0,angle:0,spin:0};
+let currentSport = 0;
+let sportTimer = 0;         // counts up in ms
+const SPORT_DURATION = 3000; // 3 seconds each
+let transitioning = false;
+let transAlpha = 0;         // 0=visible, 1=black (fade out)
+let transDir = 1;           // 1=fading out, -1=fading in
+let frameT = 0;             // global time accumulator
+
+/* ─── INIT PER SPORT ─── */
+function initSport(idx){
+  const sp = SPORTS[idx];
+  entities = [];
+  const w=W(), h=H();
+
+  if(sp.id === 'soccer'){
+    // 11 vs 11 on grass
+    [[.08,.5],[.2,.2],[.2,.42],[.2,.6],[.2,.8],[.38,.25],[.38,.5],[.38,.75],[.52,.3],[.52,.7],[.62,.5]].forEach(([xr,yr])=>
+      entities.push({x:xr*w,y:yr*h,vx:(Math.random()-.5)*.5,vy:(Math.random()-.5)*.5,team:0,r:h*.027,homeX:xr*w,homeY:yr*h,hasBall:false}));
+    [[.92,.5],[.8,.2],[.8,.42],[.8,.6],[.8,.8],[.62,.25],[.62,.5],[.62,.75],[.48,.3],[.48,.7],[.38,.5]].forEach(([xr,yr])=>
+      entities.push({x:xr*w,y:yr*h,vx:(Math.random()-.5)*.5,vy:(Math.random()-.5)*.5,team:1,r:h*.027,homeX:xr*w,homeY:yr*h,hasBall:false}));
+    entities[10].hasBall = true;
+    ball = {x:w*.55,y:h*.5,vx:1.2,vy:.4,r:h*.018,angle:0,spin:0};
+
+  } else if(sp.id === 'basketball'){
+    // 5 vs 5 on court
+    [[.15,.5],[.35,.25],[.35,.75],[.25,.4],[.25,.6]].forEach(([xr,yr])=>
+      entities.push({x:xr*w,y:yr*h,vx:(Math.random()-.5)*.6,vy:(Math.random()-.5)*.6,team:0,r:h*.032,homeX:xr*w,homeY:yr*h,hasBall:false}));
+    [[.85,.5],[.65,.25],[.65,.75],[.75,.4],[.75,.6]].forEach(([xr,yr])=>
+      entities.push({x:xr*w,y:yr*h,vx:(Math.random()-.5)*.6,vy:(Math.random()-.5)*.6,team:1,r:h*.032,homeX:xr*w,homeY:yr*h,hasBall:false}));
+    entities[2].hasBall = true;
+    ball = {x:w*.4,y:h*.5,vx:2,vy:-1,r:h*.022,angle:0,spin:.08};
+
+  } else if(sp.id === 'baseball'){
+    // 9 fielders + batter + runner
+    const fieldPos=[[.5,.12],[.35,.3],[.5,.3],[.65,.3],[.2,.5],[.38,.5],[.62,.5],[.8,.5],[.5,.58]];
+    fieldPos.forEach(([xr,yr])=>
+      entities.push({x:xr*w,y:yr*h,vx:0,vy:0,team:0,r:h*.03,homeX:xr*w,homeY:yr*h,hasBall:false}));
+    // batter + runner
+    entities.push({x:w*.5,y:h*.82,vx:0,vy:0,team:1,r:h*.03,homeX:w*.5,homeY:h*.82,hasBall:false});
+    entities.push({x:w*.35,y:h*.58,vx:0,vy:0,team:1,r:h*.03,homeX:w*.35,homeY:h*.58,hasBall:false});
+    entities[0].hasBall = true;
+    ball = {x:w*.5,y:h*.12,vx:(Math.random()-.5)*3,vy:2.5,r:h*.014,angle:0,spin:.12};
+
+  } else if(sp.id === 'rugby'){
+    // 15 vs 15, simplified to 8 vs 8
+    [[.1,.5],[.22,.3],[.22,.5],[.22,.7],[.34,.25],[.34,.5],[.34,.75],[.46,.5]].forEach(([xr,yr])=>
+      entities.push({x:xr*w,y:yr*h,vx:(Math.random()-.5)*.4,vy:(Math.random()-.5)*.4,team:0,r:h*.028,homeX:xr*w,homeY:yr*h,hasBall:false}));
+    [[.9,.5],[.78,.3],[.78,.5],[.78,.7],[.66,.25],[.66,.5],[.66,.75],[.54,.5]].forEach(([xr,yr])=>
+      entities.push({x:xr*w,y:yr*h,vx:(Math.random()-.5)*.4,vy:(Math.random()-.5)*.4,team:1,r:h*.028,homeX:xr*w,homeY:yr*h,hasBall:false}));
+    entities[7].hasBall = true;
+    ball = {x:w*.46,y:h*.5,vx:1.5,vy:.3,r:0,rw:h*.028,rh:h*.016,angle:.3,spin:.015}; // oval
+
+  } else if(sp.id === 'ufc'){
+    // 2 fighters in octagon
+    entities.push({x:w*.38,y:h*.5,vx:.3,vy:0,team:0,r:h*.042,homeX:w*.35,homeY:h*.5,hasBall:false,phase:0});
+    entities.push({x:w*.62,y:h*.5,vx:-.3,vy:0,team:1,r:h*.042,homeX:w*.65,homeY:h*.5,hasBall:false,phase:Math.PI});
+    ball = {x:w*.5,y:h*.5,vx:0,vy:0,r:0}; // no ball in UFC
+
+  } else if(sp.id === 'nfl'){
+    // American football — Steelers offense vs Patriots defense
+    // Offensive line (5) + QB + RB + TE + 2 WR
+    [[.42,.5],[.42,.38],[.42,.44],[.42,.56],[.42,.62],
+     [.37,.5],[.33,.44],[.33,.56],
+     [.52,.28],[.52,.72]].forEach(function(pos){
+      var xr=pos[0],yr=pos[1];
+      entities.push({x:xr*w,y:yr*h,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,team:0,r:h*.029,homeX:xr*w,homeY:yr*h,hasBall:false});
+    });
+    // Defensive line (4) + LB (3) + DB (4)
+    [[.58,.44],[.58,.5],[.58,.56],[.58,.62],
+     [.65,.38],[.65,.5],[.65,.62],
+     [.74,.3],[.74,.5],[.74,.7],[.80,.5]].forEach(function(pos){
+      var xr=pos[0],yr=pos[1];
+      entities.push({x:xr*w,y:yr*h,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,team:1,r:h*.029,homeX:xr*w,homeY:yr*h,hasBall:false});
+    });
+    entities[5].hasBall = true; // QB has ball
+    ball = {x:w*.37,y:h*.5,vx:0,vy:0,r:0,rw:h*.022,rh:h*.013,angle:-.3,spin:.018};
+  }
+}
+
+initSport(0);
+
+/* ─── DRAW BACKGROUNDS ─── */
+function drawSoccer(){
+  const w=W(),h=H();
+  // grass + stripes
+  ctx.fillStyle='#1d5c1d'; ctx.fillRect(0,0,w,h);
+  for(let i=0;i<14;i++){
+    ctx.fillStyle=i%2===0?'rgba(0,0,0,.05)':'rgba(255,255,255,.025)';
+    ctx.fillRect(i*w/14,0,w/14,h);
+  }
+  ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=1.4;
+  const mx=w*.04,my=h*.05,fw=w*.92,fh=h*.9;
+  ctx.strokeRect(mx,my,fw,fh);
+  ctx.beginPath();ctx.moveTo(w/2,my);ctx.lineTo(w/2,my+fh);ctx.stroke();
+  ctx.beginPath();ctx.arc(w/2,h/2,h*.22,0,Math.PI*2);ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,.55)';ctx.beginPath();ctx.arc(w/2,h/2,2.5,0,Math.PI*2);ctx.fill();
+  const pbW=w*.16,pbH=h*.54;
+  ctx.strokeRect(mx,h/2-pbH/2,pbW,pbH);ctx.strokeRect(mx+fw-pbW,h/2-pbH/2,pbW,pbH);
+  const gbW=w*.07,gbH=h*.28;
+  ctx.strokeRect(mx,h/2-gbH/2,gbW,gbH);ctx.strokeRect(mx+fw-gbW,h/2-gbH/2,gbW,gbH);
+  // goals
+  ctx.strokeStyle='rgba(255,255,255,.7)'; ctx.lineWidth=2;
+  const gDepth=w*.022, gHalf=h*.14;
+  ctx.strokeRect(mx-gDepth,h/2-gHalf,gDepth,gHalf*2);
+  ctx.strokeRect(mx+fw,h/2-gHalf,gDepth,gHalf*2);
+}
+
+function drawBasketball(){
+  const w=W(),h=H();
+  // hardwood floor
+  ctx.fillStyle='#8B5E3C'; ctx.fillRect(0,0,w,h);
+  // floorboard lines
+  ctx.strokeStyle='rgba(0,0,0,.12)'; ctx.lineWidth=1;
+  for(let i=0;i<20;i++){
+    ctx.beginPath();ctx.moveTo(0,i*h/20);ctx.lineTo(w,i*h/20);ctx.stroke();
+  }
+  ctx.strokeStyle='rgba(255,255,255,.6)'; ctx.lineWidth=1.5;
+  const mx=w*.03,my=h*.04,fw=w*.94,fh=h*.92;
+  ctx.strokeRect(mx,my,fw,fh);
+  ctx.beginPath();ctx.arc(w/2,h/2,h*.18,0,Math.PI*2);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(w/2,my);ctx.lineTo(w/2,my+fh);ctx.stroke();
+  // key areas (paint)
+  ctx.fillStyle='rgba(200,50,50,.25)';
+  const keyW=w*.18,keyH=h*.65;
+  ctx.fillRect(mx,h/2-keyH/2,keyW,keyH);
+  ctx.fillRect(mx+fw-keyW,h/2-keyH/2,keyW,keyH);
+  ctx.strokeStyle='rgba(255,255,255,.5)';
+  ctx.strokeRect(mx,h/2-keyH/2,keyW,keyH);
+  ctx.strokeRect(mx+fw-keyW,h/2-keyH/2,keyW,keyH);
+  // free throw circles
+  ctx.beginPath();ctx.arc(mx+keyW,h/2,h*.12,0,Math.PI*2);ctx.stroke();
+  ctx.beginPath();ctx.arc(mx+fw-keyW,h/2,h*.12,0,Math.PI*2);ctx.stroke();
+  // hoops
+  const hoopY=h*.5, hoopR=h*.04;
+  [mx+keyW*.05, mx+fw-keyW*.05].forEach(hx=>{
+    ctx.strokeStyle='#FF6B00'; ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.arc(hx,hoopY,hoopR,0,Math.PI*2);ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,255,.3)'; ctx.lineWidth=1;
+    // backboard
+    ctx.beginPath();ctx.moveTo(hx-hoopR*1.8,hoopY-hoopR*2.5);ctx.lineTo(hx+hoopR*1.8,hoopY-hoopR*2.5);ctx.stroke();
+  });
+}
+
+function drawBaseball(){
+  const w=W(),h=H();
+  // outfield grass
+  ctx.fillStyle='#1a4a1a'; ctx.fillRect(0,0,w,h);
+  // infield dirt
+  const cx2=w*.5,cy2=h*.65,ir=h*.38;
+  ctx.fillStyle='#8B6914';
+  ctx.beginPath();ctx.arc(cx2,cy2,ir,0,Math.PI*2);ctx.fill();
+  // infield grass diamond
+  ctx.fillStyle='#1e5c1e';
+  ctx.beginPath();
+  ctx.moveTo(cx2,cy2-ir*.58);  // 2nd base
+  ctx.lineTo(cx2+ir*.55,cy2);  // 1st base
+  ctx.lineTo(cx2,cy2+ir*.25);  // home
+  ctx.lineTo(cx2-ir*.55,cy2);  // 3rd base
+  ctx.closePath(); ctx.fill();
+  // bases
+  ctx.fillStyle='#fff';
+  [[0,-1],[1,0],[0,1],[-1,0]].forEach(([bx,by],i)=>{
+    ctx.fillRect(cx2+bx*ir*.55-6,cy2+by*(i===2?.25:1)*ir-6,12,12);
+  });
+  // pitcher mound
+  ctx.fillStyle='#9B7A24';
+  ctx.beginPath();ctx.arc(cx2,cy2-ir*.2,ir*.07,0,Math.PI*2);ctx.fill();
+  // foul lines
+  ctx.strokeStyle='rgba(255,255,255,.4)'; ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(cx2,cy2+ir*.25);ctx.lineTo(w*.02,h*.02);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx2,cy2+ir*.25);ctx.lineTo(w*.98,h*.02);ctx.stroke();
+  // outfield grass stripes
+  ctx.save(); ctx.globalAlpha=.04;
+  for(let i=0;i<8;i++){
+    ctx.fillStyle=i%2===0?'#000':'#fff';
+    ctx.beginPath();ctx.arc(cx2,cy2,ir*(1+i*.15),0,Math.PI*2);
+    ctx.arc(cx2,cy2,ir*(1.1+i*.15),0,Math.PI*2,true);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawRugby(){
+  const w=W(),h=H();
+  ctx.fillStyle='#2d5c1a'; ctx.fillRect(0,0,w,h);
+  for(let i=0;i<12;i++){
+    ctx.fillStyle=i%2===0?'rgba(0,0,0,.04)':'rgba(255,255,255,.02)';
+    ctx.fillRect(i*w/12,0,w/12,h);
+  }
+  ctx.strokeStyle='rgba(255,255,255,.45)'; ctx.lineWidth=1.3;
+  const mx=w*.03,my=h*.05,fw=w*.94,fh=h*.9;
+  ctx.strokeRect(mx,my,fw,fh);
+  // 10, 22m, halfway lines
+  [.2,.35,.5,.65,.8].forEach(xr=>{
+    ctx.beginPath();ctx.moveTo(mx+fw*xr,my);ctx.lineTo(mx+fw*xr,my+fh);ctx.stroke();
+  });
+  // try zones
+  ctx.fillStyle='rgba(255,255,255,.04)';
+  ctx.fillRect(mx,my,fw*.1,fh); ctx.fillRect(mx+fw*.9,my,fw*.1,fh);
+  // posts (H-shaped)
+  [[mx+fw*.04,h/2],[mx+fw*.96,h/2]].forEach(([px,py])=>{
+    ctx.strokeStyle='rgba(255,255,255,.7)'; ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(px,py-h*.3);ctx.lineTo(px,py+h*.04);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(px-w*.025,py-h*.12);ctx.lineTo(px+w*.025,py-h*.12);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(px-w*.025,py-h*.3);ctx.lineTo(px-w*.025,py-h*.12);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(px+w*.025,py-h*.3);ctx.lineTo(px+w*.025,py-h*.12);ctx.stroke();
+  });
+}
+
+function drawUFC(){
+  const w=W(),h=H();
+  // dark arena
+  const bg=ctx.createRadialGradient(w/2,h/2,0,w/2,h/2,w*.6);
+  bg.addColorStop(0,'#2a0a0a');bg.addColorStop(1,'#050208');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
+  // octagon
+  const cx2=w/2,cy2=h/2,oct=Math.min(w,h)*.42;
+  ctx.beginPath();
+  for(let i=0;i<8;i++){
+    const a=(Math.PI/8)+i*Math.PI/4;
+    const px=cx2+oct*Math.cos(a), py=cy2+oct*Math.sin(a);
+    i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+  }
+  ctx.closePath();
+  ctx.fillStyle='rgba(200,50,20,.08)';ctx.fill();
+  ctx.strokeStyle='rgba(255,45,0,.6)';ctx.lineWidth=2.5;ctx.stroke();
+  // canvas mat
+  ctx.fillStyle='rgba(30,10,10,.5)';
+  ctx.beginPath();
+  for(let i=0;i<8;i++){
+    const a=(Math.PI/8)+i*Math.PI/4;
+    ctx.lineTo(cx2+oct*.98*Math.cos(a),cy2+oct*.98*Math.sin(a));
+  }
+  ctx.closePath();ctx.fill();
+  // centre circle
+  ctx.strokeStyle='rgba(255,255,255,.08)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.arc(cx2,cy2,oct*.25,0,Math.PI*2);ctx.stroke();
+  // spotlights from top
+  for(let i=0;i<3;i++){
+    const lx=cx2+(i-1)*w*.25;
+    const lg=ctx.createRadialGradient(lx,0,0,lx,h*.6,h*.5);
+    lg.addColorStop(0,'rgba(255,200,100,.04)');lg.addColorStop(1,'transparent');
+    ctx.fillStyle=lg;ctx.fillRect(0,0,w,h);
+  }
+}
+
+function drawNFL(){
+  var w=W(),h=H();
+  // Field turf — dark green with lighter stripes
+  ctx.fillStyle='#1a3a1a'; ctx.fillRect(0,0,w,h);
+  for(var i=0;i<20;i++){
+    ctx.fillStyle=i%2===0?'rgba(0,0,0,.06)':'rgba(255,255,255,.025)';
+    ctx.fillRect(i*w/20,0,w/20,h);
+  }
+  // Field boundaries
+  ctx.strokeStyle='rgba(255,255,255,.55)'; ctx.lineWidth=1.4;
+  var mx=w*.04,my=h*.05,fw=w*.92,fh=h*.9;
+  ctx.strokeRect(mx,my,fw,fh);
+  // Yard lines every 10%
+  for(var y=1;y<10;y++){
+    ctx.strokeStyle=y===5?'rgba(255,255,255,.5)':'rgba(255,255,255,.25)';
+    ctx.lineWidth=y===5?1.8:1;
+    ctx.beginPath();ctx.moveTo(mx+fw*y/10,my);ctx.lineTo(mx+fw*y/10,my+fh);ctx.stroke();
+  }
+  // Hash marks
+  ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.lineWidth=1;
+  for(var y2=0;y2<=10;y2++){
+    var xPos=mx+fw*y2/10;
+    ctx.beginPath();ctx.moveTo(xPos,h*.38);ctx.lineTo(xPos,h*.42);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(xPos,h*.58);ctx.lineTo(xPos,h*.62);ctx.stroke();
+  }
+  // End zones
+  ctx.fillStyle='rgba(255,182,18,.08)'; ctx.fillRect(mx,my,fw*.09,fh);  // Steelers gold
+  ctx.fillStyle='rgba(0,33,64,.12)';    ctx.fillRect(mx+fw*.91,my,fw*.09,fh); // Patriots navy
+  // End zone labels
+  ctx.save();
+  ctx.fillStyle='rgba(255,182,18,.3)';
+  ctx.font='bold '+Math.max(8,h*.09)+'px Bebas Neue, sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.translate(mx+fw*.045,h/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText('STEELERS',0,0); ctx.restore();
+  ctx.save();
+  ctx.fillStyle='rgba(0,33,64,.4)';
+  ctx.font='bold '+Math.max(8,h*.09)+'px Bebas Neue, sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.translate(mx+fw*.955,h/2); ctx.rotate(Math.PI/2);
+  ctx.fillText('PATRIOTS',0,0); ctx.restore();
+  // Goalposts (Y-shape)
+  var gw=w*.018;
+  [[mx+fw*.04,h/2],[mx+fw*.96,h/2]].forEach(function(pos){
+    var gx=pos[0],gy=pos[1];
+    ctx.strokeStyle='rgba(255,230,100,.7)'; ctx.lineWidth=2.2;
+    ctx.beginPath();ctx.moveTo(gx,gy-h*.04);ctx.lineTo(gx,gy-h*.3);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(gx-gw,gy-h*.18);ctx.lineTo(gx,gy-h*.12);ctx.lineTo(gx+gw,gy-h*.18);ctx.stroke();
+  });
+  // Line of scrimmage glow
+  ctx.strokeStyle='rgba(255,255,0,.4)'; ctx.lineWidth=2;
+  ctx.setLineDash([6,4]);
+  ctx.beginPath();ctx.moveTo(mx+fw*.42,my);ctx.lineTo(mx+fw*.42,my+fh);ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+/* ─── DRAW BALL PER SPORT ─── */
+function drawBallSoccer(){
+  if(!ball.r)return;
+  const bx=ball.x,by=ball.y,br=ball.r;
+  ball.angle+=ball.spin;
+  ctx.save();ctx.translate(bx,by);ctx.rotate(ball.angle);
+  ctx.fillStyle='rgba(0,0,0,.2)';ctx.beginPath();ctx.ellipse(2,br*.6,br*.9,br*.3,0,0,Math.PI*2);ctx.fill();
+  const bg=ctx.createRadialGradient(-br*.3,-br*.3,0,0,0,br);
+  bg.addColorStop(0,'#fff');bg.addColorStop(1,'#ccc');
+  ctx.fillStyle=bg;ctx.beginPath();ctx.arc(0,0,br,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='rgba(0,0,0,.55)';
+  [[0,-.65],[.55,.3],[-.55,.3],[.35,-.5],[-.35,-.5]].forEach(([ox,oy])=>{
+    ctx.beginPath();ctx.arc(ox*br,oy*br,br*.22,0,Math.PI*2);ctx.fill();
+  });
+  ctx.restore();
+}
+
+function drawBallBasketball(){
+  if(!ball.r)return;
+  const bx=ball.x,by=ball.y,br=ball.r;
+  ball.angle+=ball.spin;
+  ctx.save();ctx.translate(bx,by);ctx.rotate(ball.angle);
+  ctx.fillStyle='rgba(0,0,0,.2)';ctx.beginPath();ctx.ellipse(2,br*.7,br*.9,br*.3,0,0,Math.PI*2);ctx.fill();
+  const bg=ctx.createRadialGradient(-br*.3,-br*.3,0,0,0,br);
+  bg.addColorStop(0,'#FF8C00');bg.addColorStop(1,'#CC5500');
+  ctx.fillStyle=bg;ctx.beginPath();ctx.arc(0,0,br,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,.5)';ctx.lineWidth=1.2;
+  ctx.beginPath();ctx.moveTo(-br,0);ctx.lineTo(br,0);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,-br*.7);ctx.bezierCurveTo(br*.5,-br*.5,br*.5,br*.5,0,br*.7);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,-br*.7);ctx.bezierCurveTo(-br*.5,-br*.5,-br*.5,br*.5,0,br*.7);ctx.stroke();
+  ctx.restore();
+}
+
+function drawBallBaseball(){
+  if(!ball.r)return;
+  const bx=ball.x,by=ball.y,br=ball.r;
+  ctx.save();ctx.translate(bx,by);
+  ctx.fillStyle='rgba(0,0,0,.15)';ctx.beginPath();ctx.ellipse(1,br*.6,br*.9,br*.3,0,0,Math.PI*2);ctx.fill();
+  const bg=ctx.createRadialGradient(-br*.25,-br*.25,0,0,0,br);
+  bg.addColorStop(0,'#fffaf0');bg.addColorStop(1,'#e8e0d0');
+  ctx.fillStyle=bg;ctx.beginPath();ctx.arc(0,0,br,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='rgba(180,30,30,.8)';ctx.lineWidth=.8;
+  ctx.beginPath();ctx.moveTo(-br*.3,-br*.5);ctx.bezierCurveTo(0,-br*.2,0,br*.2,-br*.3,br*.5);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(br*.3,-br*.5);ctx.bezierCurveTo(0,-br*.2,0,br*.2,br*.3,br*.5);ctx.stroke();
+  ctx.restore();
+}
+
+function drawBallRugby(){
+  const bx=ball.x,by=ball.y;
+  if(!ball.rw)return;
+  ball.angle+=ball.spin;
+  ctx.save();ctx.translate(bx,by);ctx.rotate(ball.angle);
+  ctx.fillStyle='rgba(0,0,0,.2)';ctx.beginPath();ctx.ellipse(2,ball.rh*.7,ball.rw*.9,ball.rh*.3,0,0,Math.PI*2);ctx.fill();
+  const bg=ctx.createRadialGradient(-ball.rw*.3,-ball.rh*.3,0,0,0,ball.rw);
+  bg.addColorStop(0,'#8B4513');bg.addColorStop(1,'#5c2d0a');
+  ctx.fillStyle=bg;ctx.beginPath();ctx.ellipse(0,0,ball.rw,ball.rh,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,.4)';ctx.lineWidth=.8;
+  ctx.beginPath();ctx.moveTo(-ball.rw*.5,0);ctx.lineTo(ball.rw*.5,0);ctx.stroke();
+  ctx.restore();
+}
+
+function drawBallNFL(){
+  var bx=ball.x,by=ball.y;
+  if(!ball.rw)return;
+  ball.angle+=ball.spin;
+  ctx.save();ctx.translate(bx,by);ctx.rotate(ball.angle);
+  ctx.fillStyle='rgba(0,0,0,.2)';ctx.beginPath();ctx.ellipse(2,ball.rh*.7,ball.rw*.9,ball.rh*.3,0,0,Math.PI*2);ctx.fill();
+  var bg=ctx.createRadialGradient(-ball.rw*.3,-ball.rh*.3,0,0,0,ball.rw);
+  bg.addColorStop(0,'#8B4513');bg.addColorStop(1,'#4a2000');
+  ctx.fillStyle=bg;ctx.beginPath();ctx.ellipse(0,0,ball.rw,ball.rh,0,0,Math.PI*2);ctx.fill();
+  // laces
+  ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=.7;
+  ctx.beginPath();ctx.moveTo(0,-ball.rh*.5);ctx.lineTo(0,ball.rh*.5);ctx.stroke();
+  [-ball.rw*.2,-ball.rw*.08,ball.rw*.08,ball.rw*.2].forEach(function(lx){
+    ctx.beginPath();ctx.moveTo(lx,-ball.rh*.25);ctx.lineTo(lx,ball.rh*.25);ctx.stroke();
+  });
+  ctx.restore();
+}
+
+/* ─── PLAYER DRAWING ─── */
+function drawPlayer(p, sport){
+  ctx.save();ctx.translate(p.x,p.y);
+  // shadow
+  ctx.fillStyle='rgba(0,0,0,.18)';ctx.beginPath();ctx.ellipse(0,p.r*.8,p.r*.85,p.r*.28,0,0,Math.PI*2);ctx.fill();
+
+  if(sport==='soccer'){
+    var sc=[[255,255,255],[0,77,152]];
+    ctx.fillStyle='rgb('+sc[p.team]+')';
+    ctx.beginPath();ctx.arc(0,0,p.r,0,Math.PI*2);ctx.fill();
+    if(p.team===1){ctx.fillStyle='#A50044';ctx.beginPath();ctx.arc(0,0,p.r,-.4,Math.PI+.4);ctx.arc(0,0,p.r*.44,Math.PI+.4,-.4,true);ctx.fill();}
+    ctx.fillStyle=p.team===0?'#1a5c1a':'#fff';
+
+  } else if(sport==='basketball'){
+    var bc=[['#702963','#FDB927'],['#007A33','#BA9653']];
+    ctx.fillStyle=bc[p.team][0];ctx.beginPath();ctx.arc(0,0,p.r,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=bc[p.team][1];ctx.beginPath();ctx.arc(0,0,p.r*.45,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';
+
+  } else if(sport==='baseball'){
+    ctx.fillStyle=p.team===0?'#132448':'#C6011F';
+    ctx.beginPath();ctx.arc(0,0,p.r,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=p.team===0?'#132448':'#C6011F';
+    ctx.beginPath();ctx.ellipse(0,-p.r*.6,p.r*.7,p.r*.25,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';
+
+  } else if(sport==='rugby'){
+    ctx.fillStyle=p.team===0?'#fff':'#169b62';
+    ctx.beginPath();ctx.arc(0,0,p.r,0,Math.PI*2);ctx.fill();
+    if(p.team===1){ctx.fillStyle='#FF6B00';ctx.beginPath();ctx.arc(0,0,p.r*.4,0,Math.PI*2);ctx.fill();}
+    ctx.fillStyle=p.team===0?'#333':'#fff';
+
+  } else if(sport==='ufc'){
+    p.phase=(p.phase||0)+.04;
+    var bob=Math.sin(p.phase)*p.r*.15;
+    ctx.fillStyle=p.team===0?'#1a3a6a':'#6a1a1a';
+    ctx.beginPath();ctx.arc(0,bob,p.r,0,Math.PI*2);ctx.fill();
+    var gColor=p.team===0?'#FF4500':'#1E90FF';
+    ctx.fillStyle=gColor;
+    var gAngle=Math.sin(p.phase*1.3)*.5;
+    ctx.beginPath();ctx.arc(Math.cos(gAngle)*p.r*.7,Math.sin(gAngle)*p.r*.7+bob,p.r*.32,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(-Math.cos(gAngle+.8)*p.r*.6,-Math.sin(gAngle+.8)*p.r*.4+bob,p.r*.28,0,Math.PI*2);ctx.fill();
+    var hg=ctx.createRadialGradient(0,bob-p.r*.3,0,0,bob-p.r*.3,p.r*.3);
+    hg.addColorStop(0,p.team===0?'rgba(100,150,255,.35)':'rgba(255,100,100,.35)');hg.addColorStop(1,'transparent');
+    ctx.fillStyle=hg;ctx.beginPath();ctx.arc(0,bob-p.r*.3,p.r*.4,0,Math.PI*2);ctx.fill();
+    ctx.restore();return;
+
+  } else if(sport==='nfl'){
+    // Steelers black+gold  vs  Patriots navy+red — similar style to rugby
+    ctx.fillStyle=p.team===0?'#101010':'#002244';
+    ctx.beginPath();ctx.arc(0,0,p.r,0,Math.PI*2);ctx.fill();
+    // color stripe across middle (like rugby band)
+    ctx.fillStyle=p.team===0?'#FFB612':'#C60C30';
+    ctx.beginPath();ctx.arc(0,0,p.r,-.45,Math.PI+.45);ctx.arc(0,0,p.r*.5,Math.PI+.45,-.45,true);ctx.fill();
+    // shoulder pads oval
+    ctx.fillStyle=p.team===0?'rgba(255,182,18,.3)':'rgba(198,12,48,.3)';
+    ctx.beginPath();ctx.ellipse(0,-p.r*.18,p.r*.88,p.r*.4,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';
+    ctx.restore();return;
+  }
+
+  // jersey number (soccer/basketball/baseball/rugby)
+  ctx.font='bold '+Math.max(5,p.r*.65)+'px monospace';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  if(!p._num)p._num=Math.floor(Math.random()*30+1);
+  ctx.fillText(p.hasBall?'★':p._num,0,0);
+  ctx.restore();
+}
+
+/* ─── PHYSICS UPDATE ─── */
+function updateEntities(sport){
+  const w=W(),h=H();
+  const mx=w*.04,my=h*.05,fw=w*.92,fh=h*.9;
+
+  if(sport==='ufc'){
+    // two fighters circling each other
+    entities.forEach((f,i)=>{
+      const other=entities[1-i];
+      const dx=other.x-f.x, dy=other.y-f.y;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      const targetDist=f.r*3;
+      // approach / back off
+      if(dist>targetDist*1.5){f.vx+=dx/dist*.08;f.vy+=dy/dist*.08;}
+      else if(dist<targetDist*.7){f.vx-=dx/dist*.1;f.vy-=dy/dist*.1;}
+      // orbit
+      f.vx+=-dy/dist*.05+(Math.random()-.5)*.06;
+      f.vy+=dx/dist*.05+(Math.random()-.5)*.06;
+      const spd=Math.sqrt(f.vx*f.vx+f.vy*f.vy);
+      if(spd>1.2){f.vx=f.vx/spd*1.2;f.vy=f.vy/spd*1.2;}
+      f.x+=f.vx;f.y+=f.vy;
+      const oct=Math.min(w,h)*.38;
+      const fx=f.x-w/2,fy=f.y-h/2;
+      if(Math.sqrt(fx*fx+fy*fy)>oct){
+        const a=Math.atan2(fy,fx);f.x=w/2+oct*Math.cos(a)*.95;f.y=h/2+oct*Math.sin(a)*.95;f.vx*=-.5;f.vy*=-.5;
+      }
+    });
+    return;
+  }
+
+  entities.forEach((p,i)=>{
+    const homeX=p.homeX, homeY=p.homeY;
+    p.vx+=(homeX-p.x)*.004+(Math.random()-.5)*.14;
+    p.vy+=(homeY-p.y)*.004+(Math.random()-.5)*.14;
+    const spd=Math.sqrt(p.vx*p.vx+p.vy*p.vy);
+    const maxSpd=sport==='basketball'?2.2:sport==='baseball'?0.4:sport==='nfl'?1.2:1.8;
+    if(spd>maxSpd){p.vx=p.vx/spd*maxSpd;p.vy=p.vy/spd*maxSpd;}
+    p.x+=p.vx;p.y+=p.vy;
+    if(p.x<mx+p.r){p.x=mx+p.r;p.vx*=-.6;}
+    if(p.x>mx+fw-p.r){p.x=mx+fw-p.r;p.vx*=-.6;}
+    if(p.y<my+p.r){p.y=my+p.r;p.vy*=-.6;}
+    if(p.y>my+fh-p.r){p.y=my+fh-p.r;p.vy*=-.6;}
+    if(p.hasBall){
+      if(sport==='rugby'){ball.x=p.x+p.vx*2;ball.y=p.y+p.vy*2;}
+      else{ball.x=p.x+p.vx*2.2;ball.y=p.y+p.vy*2.2;}
+    }
+  });
+
+  // ball free physics
+  const carrier=entities.find(p=>p.hasBall);
+  if(!carrier && ball.r||ball.rw){
+    ball.x+=ball.vx;ball.y+=ball.vy;
+    if(sport==='baseball'){ball.vy+=.08;} // gravity
+    ball.vx*=.985;ball.vy*=.985;
+    if(ball.x<mx+ball.r){ball.x=mx+(ball.r||10);ball.vx*=-.8;}
+    if(ball.x>mx+fw-ball.r){ball.x=mx+fw-(ball.r||10);ball.vx*=-.8;}
+    if(ball.y<my+ball.r){ball.y=my+(ball.r||10);ball.vy*=-.8;}
+    if(ball.y>my+fh-ball.r){ball.y=my+fh-(ball.r||10);ball.vy*=-.75;}
+    // pickup
+    entities.forEach(p=>{
+      const dx=p.x-ball.x,dy=p.y-ball.y;
+      if(Math.sqrt(dx*dx+dy*dy)<p.r+(ball.r||ball.rw||10)+3){
+        entities.forEach(q=>q.hasBall=false);p.hasBall=true;
+      }
+    });
+  }
+
+  // random pass
+  if(Math.random()<(sport==='rugby'?.003:.005)){
+    const carrierIdx=entities.findIndex(p=>p.hasBall);
+    if(carrierIdx>=0){
+      const t=entities[carrierIdx].team;
+      const mates=entities.filter((q,j)=>j!==carrierIdx&&q.team===t);
+      if(mates.length){
+        entities.forEach(q=>q.hasBall=false);
+        const tgt=mates[Math.floor(Math.random()*mates.length)];
+        const dx=tgt.x-ball.x,dy=tgt.y-ball.y,d=Math.sqrt(dx*dx+dy*dy)||1;
+        const spd=sport==='baseball'?6:sport==='basketball'?5:sport==='nfl'?5:4;
+        ball.vx=dx/d*spd;ball.vy=dy/d*spd;
+        ball.spin=sport==='basketball'?.12:sport==='soccer'?.05:.015;
+      }
+    }
+  }
+}
+
+/* ─── SIGNAGE STATE (declared once, globally) ─── */
+var signageIdx = 0;
+var signageNextCount = 10;
+var activeSignageSlides = [
+  {icon:'🎁',label:'PATROCINADOR OFICIAL · OFERTA EN VIVO',text:'2×1 EN PALCOS VIP · SOLO DURANTE EL DESCANSO',pill:'↗ ESCANEA'},
+  {icon:'🍺',label:'GASTRONOMÍA · ZONA HOSPITALITY',text:'CERVEZA + SNACK COMBO',pill:'↗ PIDE YA'},
+];
+
+var SIGNAGE_BY_SPORT = {
+  soccer:[
+    {icon:'🎁',label:'PATROCINADOR OFICIAL · PREMIER LEAGUE',text:'2×1 EN PALCOS VIP · SOLO DURANTE EL DESCANSO',pill:'↗ ESCANEA'},
+    {icon:'🍺',label:'GASTRONOMÍA · ÁREA HOSPITALITY',text:'PINTA + PIE & CHIPS · £12',pill:'↗ PIDE'},
+  ],
+  basketball:[
+    {icon:'🏀',label:'NBA STORE · DESCUENTO EN VIVO',text:'JERSEY OFICIAL 30% OFF · SOLO HOY',pill:'↗ COMPRA'},
+    {icon:'🎰',label:'DINÁMICA · PREDICE EL GANADOR',text:'GANA BOLETOS PARA EL PRÓXIMO JUEGO',pill:'↗ JUEGA'},
+  ],
+  baseball:[
+    {icon:'🌭',label:'GASTRONOMÍA · YANKEE STADIUM',text:'HOT DOG + SODA + CHIPS · $14.99',pill:'↗ ORDENA'},
+    {icon:'⚾',label:'FANSHOP · OFERTA DEL PARTIDO',text:'GORRA OFICIAL MLB 25% OFF',pill:'↗ COMPRA'},
+  ],
+  rugby:[
+    {icon:'🏉',label:'HOSPITALITY · SIX NATIONS',text:'BRUNCH + ACCESO VIP · £45 POR PERSONA',pill:'↗ RESERVA'},
+    {icon:'🍺',label:'PATROCINADOR · GUINNESS OFFICIAL',text:'PRIMERA PINTA GRATIS CON APP',pill:'↗ ACTIVA'},
+  ],
+  ufc:[
+    {icon:'👊',label:'UFC 300 · DINÁMICA EN VIVO',text:'PREDICE KO O DECISIÓN · GANA $500',pill:'↗ APUESTA'},
+    {icon:'🎟️',label:'PRÓXIMO EVENTO · UFC 301',text:'PREVENTA EXCLUSIVA · SOLO ESTA NOCHE',pill:'↗ COMPRA'},
+  ],
+  nfl:[
+    {icon:'🏈',label:'NFL WEEK 14 · STEELERS VS PATRIOTS',text:'CERVEZA + ALA DE POLLO COMBO · $22',pill:'↗ ORDENA YA'},
+    {icon:'🎰',label:'DINÁMICA EN VIVO · PREDICE EL PRÓXIMO TD',text:'GANA UN JERSEY OFICIAL FIRMADO',pill:'↗ PARTICIPA'},
+  ],
+};
+
+var TICKERS = {
+  soccer:`<span style="padding:0 20px"><span style="color:var(--signal)">●</span> PREMIER LEAGUE · ETIHAD STADIUM</span><span style="padding:0 20px"><span style="color:var(--warm)">⚽</span> 23' HAALAND — MAN CITY</span><span style="padding:0 20px"><span style="color:#EF0107">⚽</span> 51' SAKA — ARSENAL</span><span style="padding:0 20px"><span style="color:var(--warm)">⚽</span> 68' DE BRUYNE — MAN CITY</span><span style="padding:0 20px"><span style="color:var(--cool)">📶</span> WIFI: ETIHAD_VIP · GRATIS</span><span style="padding:0 20px"><span style="color:var(--signal)">🍺</span> HOSPITALITY NIVEL 3 · OFERTA 2×1</span>`.repeat(2),
+  basketball:`<span style="padding:0 20px"><span style="color:var(--signal)">●</span> NBA PLAYOFFS · CRYPTO.COM ARENA</span><span style="padding:0 20px"><span style="color:var(--warm)">🏀</span> LEBRON 28 PTS · 9 REB · 7 AST</span><span style="padding:0 20px"><span style="color:var(--cool)">🏀</span> TATUM 31 PTS · 6 REB</span><span style="padding:0 20px"><span style="color:var(--warm)">🎟️</span> PRÓXIMO JUEGO · VIERNES · PREVENTA</span><span style="padding:0 20px"><span style="color:var(--cool)">📶</span> WIFI: ARENA_GOLD · SIN CLAVE</span>`.repeat(2),
+  baseball:`<span style="padding:0 20px"><span style="color:var(--signal)">●</span> MLB WORLD SERIES · YANKEE STADIUM</span><span style="padding:0 20px"><span style="color:var(--warm)">⚾</span> JUDGE: 2-4 · 1 HR · 3 RBI</span><span style="padding:0 20px"><span style="color:#C6011F">⚾</span> DEVERS: 3-4 · 2B</span><span style="padding:0 20px"><span style="color:var(--warm)">🌭</span> HOT DOG + CERVEZA $18 · NIVEL 100</span><span style="padding:0 20px"><span style="color:var(--cool)">📶</span> WIFI: YANKEES_FAN · LIBRE</span>`.repeat(2),
+  rugby:`<span style="padding:0 20px"><span style="color:var(--signal)">●</span> SIX NATIONS · TWICKENHAM</span><span style="padding:0 20px"><span style="color:var(--warm)">🏉</span> TRY: 22' FARRELL — ENGLAND</span><span style="padding:0 20px"><span style="color:#169B62">🏉</span> TRY: 41' PORTER — IRELAND</span><span style="padding:0 20px"><span style="color:var(--warm)">🍺</span> CERVEZA GUINNESS · ZONA HOSPITALITY</span><span style="padding:0 20px"><span style="color:var(--cool)">📶</span> WIFI: TWICKENHAM_VIP</span>`.repeat(2),
+  nfl:`<span style="padding:0 20px"><span style="color:var(--signal)">●</span> NFL WEEK 14 · ACRISURE STADIUM · PITTSBURGH</span><span style="padding:0 20px"><span style="color:#FFB612">🏈</span> TD: Q2 HARRIS 12 YDS — STEELERS</span><span style="padding:0 20px"><span style="color:#C60C30">🏈</span> FG: Q3 FOLK 48 YDS — PATRIOTS</span><span style="padding:0 20px"><span style="color:#FFB612">🏈</span> INT: Q4 MINKAH — STEELERS</span><span style="padding:0 20px"><span style="color:var(--warm)">🍺</span> ZONA TAILGATE · CERVEZA + ALA COMBO $22</span><span style="padding:0 20px"><span style="color:var(--cool)">📶</span> WIFI: ACRISURE_VIP · GRATIS</span>`.repeat(2),
+  ufc:`<span style="padding:0 20px"><span style="color:var(--signal)">●</span> UFC 300 · T-MOBILE ARENA · LAS VEGAS</span><span style="padding:0 20px"><span style="color:var(--warm)">👊</span> RD 2: JONES DOMINA CON JABS</span><span style="padding:0 20px"><span style="color:#4169E1">👊</span> ASPINALL CONTRAATACA CON DERECHA</span><span style="padding:0 20px"><span style="color:var(--warm)">🎰</span> PREDICE AL GANADOR · GANA $500</span><span style="padding:0 20px"><span style="color:var(--cool)">📶</span> WIFI: UFC300_VIP · SIN CLAVE</span>`.repeat(2),
+};
+
+var HOME_ICONS = ['⚪','💛','⬛','🏴','🔴','⭐'];
+var AWAY_ICONS = ['🔵🔴','🍀','🔴','🍀','🔵','🔵🔴'];
+
+/* ─── SCOREBOARD UPDATER ─── */
+function updateScoreboard(idx){
+  var sp = SPORTS[idx];
+  var sb = document.getElementById('scoreboard');
+  if(!sb) return;
+
+  var scoreParts = sp.score.split('—');
+  var homeScore = scoreParts[0] ? scoreParts[0].trim() : sp.score;
+  var awayScore = scoreParts[1] ? scoreParts[1].trim() : '-';
+
+  sb.innerHTML =
+    '<div style="display:flex;align-items:center;gap:clamp(3px,.5vw,8px);padding:clamp(3px,.5vw,8px) clamp(5px,.8vw,14px);background:rgba(255,255,255,.06);font-family:\'Bebas Neue\',sans-serif;font-size:clamp(9px,1.6vw,20px)">' +
+      '<span style="font-size:clamp(7px,1vw,14px)">'+ HOME_ICONS[idx] +'</span>' +
+      '<span style="color:#fff">'+ sp.teams[0] +'</span>' +
+    '</div>' +
+    '<div style="display:flex;align-items:center;background:rgba(0,0,0,.4);">' +
+      '<div style="padding:clamp(3px,.5vw,8px) clamp(6px,1vw,16px);background:var(--signal);color:#fff;font-family:\'Bebas Neue\',sans-serif;font-size:clamp(11px,2vw,26px)">'+ homeScore +'</div>' +
+      '<div style="padding:0 clamp(4px,.6vw,10px);color:rgba(255,255,255,.35);font-family:\'Bebas Neue\',sans-serif;font-size:clamp(9px,1.4vw,16px)">—</div>' +
+      '<div style="padding:clamp(3px,.5vw,8px) clamp(6px,1vw,16px);background:#444;color:#fff;font-family:\'Bebas Neue\',sans-serif;font-size:clamp(11px,2vw,26px)">'+ awayScore +'</div>' +
+    '</div>' +
+    '<div style="display:flex;align-items:center;gap:clamp(3px,.5vw,8px);padding:clamp(3px,.5vw,8px) clamp(5px,.8vw,14px);background:rgba(255,255,255,.06);font-family:\'Bebas Neue\',sans-serif;font-size:clamp(9px,1.6vw,20px)">' +
+      '<span style="color:#fff">'+ sp.teams[1] +'</span>' +
+      '<span style="font-size:clamp(7px,1vw,14px)">'+ AWAY_ICONS[idx] +'</span>' +
+    '</div>' +
+    '<div style="padding:clamp(3px,.5vw,8px) clamp(5px,.8vw,12px);background:rgba(255,45,0,.15);border-left:1px solid rgba(255,45,0,.3);display:flex;align-items:center;gap:4px;">' +
+      '<span style="width:5px;height:5px;background:var(--signal);border-radius:50%;display:inline-block;animation:blink 1s infinite;flex-shrink:0"></span>' +
+      '<span id="matchMinute" style="color:var(--warm);font-family:\'Bebas Neue\',sans-serif;font-size:clamp(8px,1.2vw,15px)">'+ sp.time +'</span>' +
+    '</div>';
+
+  // ticker
+  var tickerEl = document.getElementById('matchTicker');
+  if(tickerEl) tickerEl.innerHTML = TICKERS[sp.id] || TICKERS.soccer;
+
+  // reset signage slides for this sport
+  activeSignageSlides = SIGNAGE_BY_SPORT[sp.id] || SIGNAGE_BY_SPORT.soccer;
+  signageIdx = 0;
+  var s = activeSignageSlides[0];
+  var card = document.getElementById('signageCard');
+  if(card && s){
+    document.getElementById('signageIcon').textContent  = s.icon;
+    document.getElementById('signageLabel').textContent = s.label;
+    document.getElementById('signageText').textContent  = s.text;
+    document.getElementById('signagePill').textContent  = s.pill;
+  }
+}
+
+/* ─── SPORT TRANSITION SYSTEM ─── */
+var transitionAlpha=0;
+var isTransitioning=false;
+var pendingSport=-1;
+
+function triggerTransition(nextIdx){
+  if(isTransitioning)return;
+  isTransitioning=true;pendingSport=nextIdx;transitionAlpha=0;
+}
+
+// draw flash overlay during transition
+function drawTransition(){
+  if(!isTransitioning)return;
+  transitionAlpha+=.06;
+  const eased=transitionAlpha<.5?transitionAlpha*2:(2-transitionAlpha*2);
+  ctx.fillStyle=`rgba(0,0,0,${Math.min(1,transitionAlpha*2)})`;
+  ctx.fillRect(0,0,W(),H());
+  if(transitionAlpha>=.5 && pendingSport>=0){
+    currentSport=pendingSport;
+    pendingSport=-1;
+    initSport(currentSport);
+    updateScoreboard(currentSport);
+    const gf=document.getElementById('goalFlash');
+    const gt=document.getElementById('goalText');
+    if(gf&&gt){
+      const SPORT=SPORTS[currentSport];
+      const msgs={soccer:'⚽ GOOOL!',basketball:'🏀 SCORE!',baseball:'⚾ HOME RUN!',rugby:'🏉 TRY!',ufc:'👊 KO!'};
+      gt.textContent=msgs[SPORT.id]||'SCORE!';
+    }
+  }
+  if(transitionAlpha>=1){ isTransitioning=false;transitionAlpha=0; }
+}
+
+// Sport name banner during switch
+let bannerAlpha=0,bannerSport='';
+function showBanner(name){bannerSport=name;bannerAlpha=1;}
+function drawBanner(){
+  if(bannerAlpha<=0)return;
+  bannerAlpha-=.018;
+  const w=W(),h=H();
+  ctx.save();
+  ctx.globalAlpha=Math.min(1,bannerAlpha*3);
+  ctx.fillStyle='rgba(0,0,0,.75)';
+  const bh=h*.22;
+  ctx.fillRect(0,h/2-bh/2,w,bh);
+  ctx.fillStyle=SPORTS[currentSport].accent;
+  ctx.font=`900 ${Math.max(16,h*.14)}px 'Bebas Neue',sans-serif`;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.letterSpacing='.1em';
+  ctx.fillText(bannerSport,w/2,h/2);
+  ctx.restore();
+}
+
+/* ─── MAIN LOOP ─── */
+let sportClock=0;
+const SPORT_MS=3000;
+
+function loop(ts){
+  const w=W(),h=H();
+  ctx.clearRect(0,0,w,h);
+
+  // draw sport background
+  const sp=SPORTS[currentSport];
+  if(sp.id==='soccer')drawSoccer();
+  else if(sp.id==='basketball')drawBasketball();
+  else if(sp.id==='baseball')drawBaseball();
+  else if(sp.id==='rugby')drawRugby();
+  else if(sp.id==='ufc')drawUFC();
+  else if(sp.id==='nfl')drawNFL();
+
+  // update + draw entities
+  updateEntities(sp.id);
+  entities.forEach(p=>drawPlayer(p,sp.id));
+
+  // draw ball
+  if(sp.id==='soccer')drawBallSoccer();
+  else if(sp.id==='basketball')drawBallBasketball();
+  else if(sp.id==='baseball')drawBallBaseball();
+  else if(sp.id==='rugby')drawBallRugby();
+  else if(sp.id==='nfl')drawBallNFL();
+
+  // subtle crowd glow flicker
+  const flicker=(Math.sin(ts*.003)*.5+.5)*.025;
+  ctx.fillStyle=`rgba(255,220,80,${flicker})`;ctx.fillRect(0,0,w,h);
+
+  drawTransition();
+  drawBanner();
+
+  // sport rotation timer
+  sportClock+=(ts-lastTs)||16;
+  if(sportClock>=SPORT_MS&&!isTransitioning){
+    sportClock=0;
+    const next=(currentSport+1)%SPORTS.length;
+    triggerTransition(next);
+    showBanner(SPORTS[next].label);
+  }
+  lastTs=ts;
+  requestAnimationFrame(loop);
+}
+
+let lastTs=0;
+updateScoreboard(0);
+requestAnimationFrame(ts=>{lastTs=ts;loop(ts);});
+
+/* ─── SIGNAGE SLIDES ROTATOR ─── */
+var siDots = [
+  document.getElementById('sd0'),
+  document.getElementById('sd1'),
+  document.getElementById('sd2'),
+  document.getElementById('sd3')
+];
+
+setInterval(function(){
+  signageNextCount--;
+  var ns = document.getElementById('nextSlide');
+  if(ns) ns.textContent = '0:' + String(signageNextCount).padStart(2,'0');
+
+  if(signageNextCount <= 0){
+    var slides = activeSignageSlides.length ? activeSignageSlides : [
+      {icon:'🎁',label:'PATROCINADOR OFICIAL',text:'OFERTA EN VIVO',pill:'↗ ESCANEA'},
+    ];
+    signageIdx = (signageIdx + 1) % slides.length;
+    var s = slides[signageIdx];
+    var card = document.getElementById('signageCard');
+    if(card){
+      card.style.opacity='0'; card.style.transform='translateY(8px)';
+      setTimeout(function(){
+        document.getElementById('signageIcon').textContent  = s.icon;
+        document.getElementById('signageLabel').textContent = s.label;
+        document.getElementById('signageText').textContent  = s.text;
+        document.getElementById('signagePill').textContent  = s.pill;
+        siDots.forEach(function(d,i){ if(d) d.classList.toggle('active', i === signageIdx % 4); });
+        card.style.opacity='1'; card.style.transform='translateY(0)';
+      }, 350);
+    }
+    signageNextCount = 10;
+  }
+}, 1000);
+
+/* ── QR PATTERN ── */
+const qr=document.getElementById('qrBox');
+const pattern=[1,1,1,0,1,1,0,1,1,1,1,0,1,0,0,0,1,0,1,0,1,1,1,0,1];
+pattern.forEach(v=>{const c=document.createElement('div');c.className='qr-cell'+(v?' on':'');qr.appendChild(c)});
+
+/* ── SCROLL REVEAL ── */
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in')});
+},{threshold:.1});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+</script>
+</body>
+</html>
